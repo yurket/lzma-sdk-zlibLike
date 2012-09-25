@@ -1347,9 +1347,9 @@ SRes SzArEx_Extract(
   if (*outBuffer == 0 || *blockIndex != folderIndex)
   {
     CSzFolder *folder = p->db.Folders + folderIndex;
-    UInt64 unpackSizeSpec = SzFolder_GetUnpackSize(folder);
+    UInt64 unpackSizeSpec = SzFolder_GetUnpackSize(folder);             // returns UnpackedSizes 6 086 757
     size_t unpackSize = (size_t)unpackSizeSpec;
-    UInt64 startOffset = SzArEx_GetFolderStreamPos(p, folderIndex, 0);
+    UInt64 startOffset = SzArEx_GetFolderStreamPos(p, folderIndex, 0);  // returns 32
 
     if (unpackSize != unpackSizeSpec)
       return SZ_ERROR_MEM;
@@ -1361,7 +1361,7 @@ SRes SzArEx_Extract(
     
     if (res == SZ_OK)
     {
-      *outBufferSize = unpackSize;
+      *outBufferSize = unpackSize;          // 6 086 757
       if (unpackSize != 0)
       {
         *outBuffer = (Byte *)IAlloc_Alloc(allocMain, unpackSize);
@@ -1370,9 +1370,9 @@ SRes SzArEx_Extract(
       }
       if (res == SZ_OK)
       {
-        res = SzFolder_Decode(folder,
+        res = SzFolder_DecodeToFile(folder,
           p->db.PackSizes + p->FolderStartPackStreamIndex[folderIndex],
-          inStream, startOffset,
+          inStream, p, startOffset,
           *outBuffer, unpackSize, allocTemp);
         if (res == SZ_OK)
         {

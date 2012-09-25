@@ -2,7 +2,7 @@
 2009-09-20 : Igor Pavlov : Public domain */
 
 #include "LzmaDec.h"
-
+#include "stdio.h"
 #include <string.h>
 
 #define kNumTopBits 24
@@ -921,26 +921,29 @@ SRes LzmaProps_Decode(CLzmaProps *p, const Byte *data, unsigned size)
   return SZ_OK;
 }
 
-static SRes LzmaDec_AllocateProbs2(CLzmaDec *p, const CLzmaProps *propNew, ISzAlloc *alloc)
+static SRes LzmaDec_AllocateProbs2(CLzmaDec *decoder, const CLzmaProps *propNew, ISzAlloc *alloc)
 {
   UInt32 numProbs = LzmaProps_GetNumProbs(propNew);
-  if (p->probs == 0 || numProbs != p->numProbs)
+  if (decoder->probs == 0 || numProbs != decoder->numProbs)
   {
-    LzmaDec_FreeProbs(p, alloc);
-    p->probs = (CLzmaProb *)alloc->Alloc(alloc, numProbs * sizeof(CLzmaProb));
-    p->numProbs = numProbs;
-    if (p->probs == 0)
+    LzmaDec_FreeProbs(decoder, alloc);
+    decoder->probs = (CLzmaProb *)alloc->Alloc(alloc, numProbs * sizeof(CLzmaProb));
+    decoder->numProbs = numProbs;
+    if (decoder->probs == 0)
       return SZ_ERROR_MEM;
   }
   return SZ_OK;
 }
 
-SRes LzmaDec_AllocateProbs(CLzmaDec *p, const Byte *props, unsigned propsSize, ISzAlloc *alloc)
+SRes LzmaDec_AllocateProbs(CLzmaDec *decoder, const Byte *props, unsigned propsSize, ISzAlloc *alloc)
 {
   CLzmaProps propNew;
   RINOK(LzmaProps_Decode(&propNew, props, propsSize));
-  RINOK(LzmaDec_AllocateProbs2(p, &propNew, alloc));
-  p->prop = propNew;
+  RINOK(LzmaDec_AllocateProbs2(decoder, &propNew, alloc));
+  decoder->prop = propNew;
+  // ===========================================================
+  printf("dicBufSize from props: %d \n", propNew.dicSize);
+  // ===========================================================
   return SZ_OK;
 }
 

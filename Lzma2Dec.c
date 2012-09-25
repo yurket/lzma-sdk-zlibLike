@@ -72,11 +72,11 @@ static SRes Lzma2Dec_GetOldProps(Byte prop, Byte *props)
   return SZ_OK;
 }
 
-SRes Lzma2Dec_AllocateProbs(CLzma2Dec *p, Byte prop, ISzAlloc *alloc)
+SRes Lzma2Dec_AllocateProbs(CLzma2Dec *state, Byte prop, ISzAlloc *alloc)
 {
   Byte props[LZMA_PROPS_SIZE];
   RINOK(Lzma2Dec_GetOldProps(prop, props));
-  return LzmaDec_AllocateProbs(&p->decoder, props, LZMA_PROPS_SIZE, alloc);
+  return LzmaDec_AllocateProbs(&state->decoder, props, LZMA_PROPS_SIZE, alloc);
 }
 
 SRes Lzma2Dec_Allocate(CLzma2Dec *p, Byte prop, ISzAlloc *alloc)

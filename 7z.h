@@ -5,6 +5,7 @@
 #define __7Z_H
 
 #include "7zBuf.h"
+#include "7zFile.h"
 
 EXTERN_C_BEGIN
 
@@ -74,6 +75,7 @@ typedef struct
 
   UInt32 NumUnpackStreams;
 } CSzFolder;
+
 
 void SzFolder_Init(CSzFolder *p);
 UInt64 SzFolder_GetUnpackSize(CSzFolder *p);
@@ -185,6 +187,9 @@ SRes SzArEx_Extract(
     ISzAlloc *allocTemp);
 
 
+SRes SzFolder_DecodeToFile(const CSzFolder *folder, const UInt64 *packSizes,
+                           ILookInStream *stream, const CSzArEx *db, UInt64 startPos,
+                           Byte *outBuffer, size_t outSize, ISzAlloc *allocMain);
 /*
 SzArEx_Open Errors:
 SZ_ERROR_NO_ARCHIVE

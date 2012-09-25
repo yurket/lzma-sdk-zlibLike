@@ -187,7 +187,7 @@ SRes LookInStream_SeekTo(ILookInStream *stream, UInt64 offset);
 SRes LookInStream_Read2(ILookInStream *stream, void *buf, size_t size, SRes errorType);
 SRes LookInStream_Read(ILookInStream *stream, void *buf, size_t size);
 
-#define LookToRead_BUF_SIZE (1 << 14)
+#define LookToRead_BUF_SIZE (1 << 18)
 
 typedef struct
 {
