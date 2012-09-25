@@ -278,8 +278,14 @@ static SRes SzDecodeLzma2ToFile(CSzCoderInfo *coder, const CSzArEx *db, UInt64 i
     SRes res = SZ_OK;
     unsigned int i;
     SizeT unpackedForNow = 0;
+    UInt64 fileUnpackedSize = 0;
     Byte *myOwnBufBitch = NULL;
     size_t myOwnBufSize = 0;
+    size_t lookahead = 0;
+    CSzFile outFile;
+    UInt64 _outSizeProcessed = 0, _inSizeProcessed = 0;
+    UInt64 _inPos = 0;
+    size_t _inSize = 0;
 
     Lzma2Dec_Construct(&state);
     if (coder->Props.size != 1)
@@ -287,91 +293,146 @@ static SRes SzDecodeLzma2ToFile(CSzCoderInfo *coder, const CSzArEx *db, UInt64 i
     RINOK(Lzma2Dec_AllocateProbs(&state, coder->Props.data[0], allocMain));
     Lzma2Dec_Init(&state);
 
-    for (i = 0; i < db->db.NumFiles; i++)
+    if (myOwnBufBitch == NULL)
     {
-        wchar_t *fileName = NULL;
-        CSzFile outFile;
-        UInt64 fileUnpackedSize = 0;
-        size_t lookahead = 0;
+        myOwnBufSize = state.decoder.prop.dicSize;
+        myOwnBufBitch = (Byte *)IAlloc_Alloc(allocMain, myOwnBufSize);
+        if (myOwnBufBitch == NULL)
+            return SZ_ERROR_MEM;
+        state.decoder.dic = myOwnBufBitch;
+        state.decoder.dicBufSize = myOwnBufSize;
+    }
 
-        fileName = (wchar_t *)db->FileNames.data + db->FileNameOffsets[i];
-        fileUnpackedSize = db->db.Files[i].Size;
-        wprintf(L"file %d: %s\n", i+1, fileName);
+    //for (i = 0; i < db->db.NumFiles; i++)
+    //{
+    //    wchar_t *fileName = NULL;
+    //    CSzFile outFile;
+    //    UInt64 fileUnpackedSize = 0;
+    //    size_t lookahead = 0;
 
-        if (OutFile_OpenW(&outFile, fileName))
-        {
-            wprintf(L"can not open output file \"%s\"\n", fileName);
-            res = SZ_ERROR_FAIL;
-            continue;
-        }
+    //    fileName = (wchar_t *)db->FileNames.data + db->FileNameOffsets[i];
+    //    fileUnpackedSize = db->db.Files[i].Size;
+    //    wprintf(L"file %d: %s\n", i+1, fileName);
+
+    //    if (OutFile_OpenW(&outFile, fileName))
+    //    {
+    //        wprintf(L"can not open output file \"%s\"\n", fileName);
+    //        res = SZ_ERROR_FAIL;
+    //        continue;
+    //    }
 
 
         for (;;)
         {
             Byte *inBuf = NULL;
             size_t remainBufSize = 0;
-            if (lookahead == 0)
-                lookahead = (1 << 22);
-            if (myOwnBufBitch == NULL)
+            if (_inPos == _inSize)
             {
-                myOwnBufSize = state.decoder.prop.dicSize;
-                myOwnBufBitch = (Byte *)IAlloc_Alloc(allocMain, myOwnBufSize);
-                if (myOwnBufBitch == NULL)
-                    return SZ_ERROR_MEM;
-                state.decoder.dic = myOwnBufBitch;
-                state.decoder.dicBufSize = myOwnBufSize;
+                _inPos = _inSize = 0;
+                //RINOK(inStream->Read(_inBuf, kInBufSize, &_inSize));      // _inSize = 1 048 576
+                RINOK(inStream->Look((void *)inStream, (const void **)&inBuf, &_inSize));
             }
-            if (lookahead > fileUnpackedSize)
-                lookahead = (size_t)fileUnpackedSize;
-            remainBufSize = state.decoder.dicBufSize - state.decoder.dicPos;
-            if (lookahead > remainBufSize)
-                 lookahead = remainBufSize;
-            res = inStream->Look((void *)inStream, (const void **)&inBuf, &lookahead);  // changes to 65 kB
+
+            SizeT dicPos = state.decoder.dicPos;
+            SizeT curSize = state.decoder.dicBufSize - dicPos;     // dicBufSize = 6 291 456
+            const UInt32 kStepSize = ((UInt32)1 << 22);
+            if (curSize > kStepSize)
+                curSize = (SizeT)kStepSize;
+            
+            ELzmaFinishMode finishMode = LZMA_FINISH_ANY;
+            const UInt64 rem = outSize - _outSizeProcessed;      // _outSize = 6 086 757 (UnpackedSize)
+            if (rem < curSize)
+            {
+                curSize = (SizeT)rem;
+                /*
+                // finishMode = LZMA_FINISH_END;
+                we can't use LZMA_FINISH_END here to allow partial decoding
+                */
+            }
+
+            SizeT inSizeProcessed = _inSize - _inPos;
+            ELzmaStatus status;
+
+            //if (lookahead == 0)
+            //    lookahead = (1 << 22);
+            //if (myOwnBufBitch == NULL)
+            //{
+            //    myOwnBufSize = state.decoder.prop.dicSize;
+            //    myOwnBufBitch = (Byte *)IAlloc_Alloc(allocMain, myOwnBufSize);
+            //    if (myOwnBufBitch == NULL)
+            //        return SZ_ERROR_MEM;
+            //    state.decoder.dic = myOwnBufBitch;
+            //    state.decoder.dicBufSize = myOwnBufSize;
+            //}
+            //if (lookahead > fileUnpackedSize)
+            //    lookahead = (size_t)fileUnpackedSize;
+            //remainBufSize = state.decoder.dicBufSize - state.decoder.dicPos;
+            //if (lookahead > remainBufSize)
+            //     lookahead = remainBufSize;
+            //res = inStream->Look((void *)inStream, (const void **)&inBuf, &lookahead);  // changes to 65 kB
+            //if (res != SZ_OK)
+            //    break;
+            //
+            //SizeT inProcessed = (SizeT)lookahead;
+            //SizeT dicPos = state.decoder.dicPos;
+            //ELzmaStatus status;
+            res = Lzma2Dec_DecodeToDic(&state, dicPos + curSize, inBuf, &inSizeProcessed, finishMode, &status);        // WTF ?
             if (res != SZ_OK)
                 break;
 
-            {
-                SizeT inProcessed = (SizeT)lookahead;
-                SizeT dicPos = state.decoder.dicPos;
-                ELzmaStatus status;
-                res = Lzma2Dec_DecodeToDic(&state, dicPos + lookahead*8, inBuf, &inProcessed, LZMA_FINISH_ANY, &status);        // WTF ?
-                lookahead -= inProcessed;
-                fileUnpackedSize -= inProcessed;
-                unpackedForNow += state.decoder.dicPos - dicPos;
-                if (res != SZ_OK)
-                    break;
-                if (state.decoder.dicPos == state.decoder.dicBufSize || 
-                    (inProcessed == 0 && dicPos == state.decoder.dicPos) || 
-                    fileUnpackedSize == 0 )
-                {
-                    size_t bytesWritten = 0;
-                    if (fileUnpackedSize == 0)
-                        bytesWritten = inProcessed;
-                    else if (state.decoder.dicPos == state.decoder.dicBufSize)
-                        bytesWritten = state.decoder.dicBufSize;
-                    if (File_Write(&outFile, state.decoder.dic, &bytesWritten) != 0 )
-                    {
-                        wprintf(L"can not write to output file %s", fileName);
-                        res = SZ_ERROR_FAIL;
-                        break;
-                    }
-                    if (/*state.decoder.dicBufSize != outSize ||*/ lookahead != 0 /*||
-                        (status != LZMA_STATUS_FINISHED_WITH_MARK)*/)
-                        res = SZ_ERROR_DATA;
-                    if ( (state.decoder.dicPos == state.decoder.dicBufSize) || (fileUnpackedSize == 0) )
-                    {
-                        state.decoder.dicPos = 0;
-                    }
-                }
+            _inPos += (UInt32)inSizeProcessed;
+            _inSizeProcessed += inSizeProcessed;
+            SizeT outSizeProcessed = state.decoder.dicPos - dicPos;
+            _outSizeProcessed += outSizeProcessed;
 
-                res = inStream->Skip((void *)inStream, inProcessed);
-                 if (res != SZ_OK)
-                    break;
-                 if (fileUnpackedSize == 0)
-                     break;
+            bool finished = (inSizeProcessed == 0 && outSizeProcessed == 0);
+            bool stopDecoding = (_outSizeProcessed >= outSize);
+
+            if (res != 0 || state.decoder.dicPos == state.decoder.dicBufSize || finished || stopDecoding)
+            {
+                HRESULT res2 = 0/*WriteStream(outStream, state.decoder.dic, state.decoder.dicPos)*/;
+                if (res != 0)
+                    return S_FALSE;
+                RINOK(res2);
+                if (stopDecoding)
+                    return S_OK;
+                if (finished)
+                    return (status == LZMA_STATUS_FINISHED_WITH_MARK ? S_OK : S_FALSE);
             }
+            if (state.decoder.dicPos == state.decoder.dicBufSize)
+                state.decoder.dicPos = 0;
+
+
+
+
+
+            //if (state.decoder.dicPos == state.decoder.dicBufSize || 
+            //    (inProcessed == 0 && dicPos == state.decoder.dicPos) || 
+            //    fileUnpackedSize == 0 )
+            //{
+            //    SizeT bytesWritten = 0;
+            //    if (File_Write(&outFile, state.decoder.dic, &bytesWritten) != 0 )
+            //    {
+            //        wprintf(L"can not write to output file");
+            //        res = SZ_ERROR_FAIL;
+            //        break;
+            //    }
+            //    if (/*state.decoder.dicBufSize != outSize ||*/ lookahead != 0 /*||
+            //        (status != LZMA_STATUS_FINISHED_WITH_MARK)*/)
+            //        res = SZ_ERROR_DATA;
+            //    if ( (state.decoder.dicPos == state.decoder.dicBufSize) || (fileUnpackedSize == 0) )
+            //    {
+            //        state.decoder.dicPos = 0;
+            //    }
+            //}
+            res = inStream->Skip((void *)inStream, inSizeProcessed);
+             if (res != SZ_OK)
+                break;
+             if (fileUnpackedSize == 0)
+                 break;
+            
         }
-    }
+    //}
     IAlloc_Free(allocMain, myOwnBufBitch);
     Lzma2Dec_FreeProbs(&state, allocMain);
     return res;

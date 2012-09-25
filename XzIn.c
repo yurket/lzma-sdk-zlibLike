@@ -95,7 +95,7 @@ static SRes Xz_ReadIndex2(CXzStream *p, const Byte *buf, size_t size, ISzAlloc *
   {
     p->numBlocks = numBlocks;
     p->numBlocksAllocated = numBlocks;
-    p->blocks = alloc->Alloc(alloc, sizeof(CXzBlockSizes) * numBlocks);
+    p->blocks = (CXzBlockSizes *)alloc->Alloc(alloc, sizeof(CXzBlockSizes) * numBlocks);
     if (p->blocks == 0)
       return SZ_ERROR_MEM;
     for (i = 0; i < numBlocks; i++)
@@ -123,7 +123,7 @@ static SRes Xz_ReadIndex(CXzStream *p, ILookInStream *stream, UInt64 indexSize, 
   size = (size_t)indexSize;
   if (size != indexSize)
     return SZ_ERROR_UNSUPPORTED;
-  buf = alloc->Alloc(alloc, size);
+  buf = (Byte *)alloc->Alloc(alloc, size);
   if (buf == 0)
     return SZ_ERROR_MEM;
   res = LookInStream_Read2(stream, buf, size, SZ_ERROR_UNSUPPORTED);

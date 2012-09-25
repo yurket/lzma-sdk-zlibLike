@@ -207,7 +207,7 @@ SRes BraState_SetFromMethod(IStateCoder *p, UInt64 id, ISzAlloc *alloc)
       id != XZ_ID_SPARC)
     return SZ_ERROR_UNSUPPORTED;
   p->p = 0;
-  decoder = alloc->Alloc(alloc, sizeof(CBraState));
+  decoder = (CBraState *)alloc->Alloc(alloc, sizeof(CBraState));
   if (decoder == 0)
     return SZ_ERROR_MEM;
   decoder->methodId = (UInt32)id;
@@ -295,7 +295,7 @@ static SRes Lzma2State_Code(void *pp, Byte *dest, SizeT *destLen, const Byte *sr
 {
   ELzmaStatus status;
   /* ELzmaFinishMode fm = (finishMode == LZMA_FINISH_ANY) ? LZMA_FINISH_ANY : LZMA_FINISH_END; */
-  SRes res = Lzma2Dec_DecodeToBuf((CLzma2Dec *)pp, dest, destLen, src, srcLen, finishMode, &status);
+  SRes res = Lzma2Dec_DecodeToBuf((CLzma2Dec *)pp, dest, destLen, src, srcLen, (ELzmaFinishMode)finishMode, &status);
   srcWasFinished = srcWasFinished;
   *wasFinished = (status == LZMA_STATUS_FINISHED_WITH_MARK);
   return res;
@@ -303,7 +303,7 @@ static SRes Lzma2State_Code(void *pp, Byte *dest, SizeT *destLen, const Byte *sr
 
 static SRes Lzma2State_SetFromMethod(IStateCoder *p, ISzAlloc *alloc)
 {
-  CLzma2Dec *decoder = alloc->Alloc(alloc, sizeof(CLzma2Dec));
+  CLzma2Dec *decoder = (CLzma2Dec *)alloc->Alloc(alloc, sizeof(CLzma2Dec));
   p->p = decoder;
   if (decoder == 0)
     return SZ_ERROR_MEM;
@@ -385,7 +385,7 @@ SRes MixCoder_Code(CMixCoder *p, Byte *dest, SizeT *destLen,
 
   if (p->buf == 0)
   {
-    p->buf = p->alloc->Alloc(p->alloc, CODER_BUF_SIZE * (MIXCODER_NUM_FILTERS_MAX - 1));
+    p->buf = (Byte *)p->alloc->Alloc(p->alloc, CODER_BUF_SIZE * (MIXCODER_NUM_FILTERS_MAX - 1));
     if (p->buf == 0)
       return SZ_ERROR_MEM;
   }
@@ -624,7 +624,7 @@ SRes XzUnpacker_Code(CXzUnpacker *p, Byte *dest, SizeT *destLen,
         return SZ_OK;
       }
       
-      res = MixCoder_Code(&p->decoder, dest, &destLen2, src, &srcLen2, False, finishMode, status);
+      res = MixCoder_Code(&p->decoder, dest, &destLen2, src, &srcLen2, False, (ECoderFinishMode)finishMode, status);
       XzCheck_Update(&p->check, dest, destLen2);
       
       (*srcLen) += srcLen2;

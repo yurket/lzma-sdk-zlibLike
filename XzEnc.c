@@ -130,7 +130,7 @@ SRes Xz_AddIndexRecord(CXzStream *p, UInt64 unpackSize, UInt64 totalSize, ISzAll
     CXzBlockSizes *blocks;
     if (newSize / sizeof(CXzBlockSizes) != num)
       return SZ_ERROR_MEM;
-    blocks = alloc->Alloc(alloc, newSize);
+    blocks = (CXzBlockSizes *)alloc->Alloc(alloc, newSize);
     if (blocks == 0)
       return SZ_ERROR_MEM;
     if (p->numBlocks != 0)
