@@ -4,6 +4,8 @@
 #include <string.h>
 
 #include "Types.h"
+#include "stdio.h"
+#include "7z.h"
 
 SRes SeqInStream_Read2(ISeqInStream *stream, void *buf, size_t size, SRes errorType)
 {
@@ -84,22 +86,22 @@ static SRes LookToRead_Look_Lookahead(void *pp, const void **buf, size_t *size)
   return res;
 }
 
-static SRes LookToRead_Look_Exact(void *pp, const void **buf, size_t *size)
+static SRes LookToRead_Look_Exact(void *stream, const void **buf, size_t *size)
 {
   SRes res = SZ_OK;
-  CLookToRead *p = (CLookToRead *)pp;
-  size_t size2 = p->size - p->pos;
+  CLookToRead *pStream = (CLookToRead *)stream;
+  size_t size2 = pStream->size - pStream->pos;
   if (size2 == 0 && *size > 0)
   {
-    p->pos = 0;
+    pStream->pos = 0;
     if (*size > LookToRead_BUF_SIZE)
       *size = LookToRead_BUF_SIZE;
-    res = p->realStream->Read(p->realStream, p->buf, size);
-    size2 = p->size = *size;
+    res = pStream->realStream->Read(pStream->realStream, pStream->buf, size);
+    size2 = pStream->size = *size;
   }
   if (size2 < *size)
     *size = size2;
-  *buf = p->buf + p->pos;
+  *buf = pStream->buf + pStream->pos;
   return res;
 }
 
@@ -166,4 +168,62 @@ static SRes SecToRead_Read(void *pp, void *buf, size_t *size)
 void SecToRead_CreateVTable(CSecToRead *p)
 {
   p->s.Read = SecToRead_Read;
+}
+
+
+// ===========================================================================
+
+SRes WriteStream(const CSzArEx *db, Byte *buf, size_t size, size_t *writtenSize)
+{
+    SRes res = SZ_OK;
+    SizeT offset = 0;
+    if (buf == NULL)
+        return SZ_ERROR_DATA;
+    if (size == 0)
+        return SZ_OK;
+
+    for (UInt32 i = 0; i < db->db.NumFiles; i++)
+    {
+        wchar_t *fileName = NULL;
+        CSzFile outFile;
+        size_t fileUnpackedSize = 0;
+        size_t bytesToWrite = 0;
+
+        fileName = (wchar_t *)db->FileNames.data + db->FileNameOffsets[i];
+        fileUnpackedSize = (size_t)db->db.Files[i].Size;
+        wprintf(L"file %d: %s\n", i+1, fileName);
+        
+        if (size < fileUnpackedSize)
+            bytesToWrite = size;
+        else
+            bytesToWrite = fileUnpackedSize;
+        if (OutFile_OpenW(&outFile, fileName))
+        {
+            wprintf(L"can not open output file \"%s\"\n", fileName);
+            res = SZ_ERROR_FAIL;
+            continue;
+        }
+        while(bytesToWrite)
+        {
+            size_t bytesWritten = bytesToWrite;
+            if (File_Write(&outFile, buf + offset, &bytesWritten) != 0 )
+            {
+                wprintf(L"can not write to output file");
+                res = SZ_ERROR_FAIL;
+                continue;
+            }
+            bytesToWrite -= bytesWritten;
+            offset += bytesWritten;
+            *writtenSize += bytesWritten;
+        }
+ 
+        if (*writtenSize == fileUnpackedSize)
+        {
+            *writtenSize = 0;
+            File_Close(&outFile);
+        }
+        
+    }
+
+    return res;
 }
