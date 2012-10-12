@@ -395,6 +395,7 @@ static SRes SzDecodeLzma2ToFile(CSzCoderInfo *coder, const CSzArEx *db, UInt64 i
 
         if (res != 0 || state.decoder.dicPos == state.decoder.dicBufSize || finished || stopDecoding)
         {
+
             HRESULT res2 = WriteStream(db, state.decoder.dic, state.decoder.dicPos, &writtenBytes);
             if (res != 0)
                 return S_FALSE;

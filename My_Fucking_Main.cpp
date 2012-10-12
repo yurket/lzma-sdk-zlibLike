@@ -9,7 +9,7 @@
 
 int main(int argc, char *argv[])
 {
-    char *FileName = argv[1];
+    char *FileName = NULL;
     CLookToRead lookStream;
     CFileInStream archiveStream;
     CSzArEx db;              /* 7z archive database structure */
@@ -24,11 +24,14 @@ int main(int argc, char *argv[])
     allocTempImp.Alloc = SzAllocTemp;
     allocTempImp.Free = SzFreeTemp;
 
-    if (argc > 2)
+    if (argc == 2)  FileName = argv[1];
+    else if (argc == 3) FileName = argv[2];
+    else
     {
         printf("to much args!\n");
         return 1;
     }
+
     if (InFile_Open(&archiveStream.file, FileName))
     {
         printf("can not open input file\n");
@@ -87,11 +90,11 @@ int main(int argc, char *argv[])
         if (outSizeProcessed != outBufferSize)
             printf("[!] buf size %d bytes, while processed %d bytes!", outBufferSize, outSizeProcessed);
 
-        hOutFile = CreateFileW((LPCWSTR)db.FileNames.data, GENERIC_WRITE, 0, NULL, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL);
-        WriteFile(hOutFile, outBuffer, outBufferSize, &bytesWritten, NULL);
-        if (bytesWritten != outBufferSize)
-            printf("[!] buf size %d bytes, while written %d bytes!", outBufferSize, bytesWritten);
-        CloseHandle(hOutFile);
+        //hOutFile = CreateFileW((LPCWSTR)db.FileNames.data, GENERIC_WRITE, 0, NULL, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL);
+        //WriteFile(hOutFile, outBuffer, outBufferSize, &bytesWritten, NULL);
+        //if (bytesWritten != outBufferSize)
+        //    printf("[!] buf size %d bytes, while written %d bytes!", outBufferSize, bytesWritten);
+        //CloseHandle(hOutFile);
     }
     system("pause");
     return 0;
