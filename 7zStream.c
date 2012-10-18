@@ -173,6 +173,21 @@ void SecToRead_CreateVTable(CSecToRead *p)
 
 // ===========================================================================
 
+static wchar_t * BaseName(wchar_t *path)
+{
+    bool dir_in_path = false;
+    wchar_t *p = path;
+    while (*p++)
+        if ( *p == (wchar_t)'\\' || *p == (wchar_t)'/')
+            dir_in_path = true;
+    if (dir_in_path)
+    {
+        while ((*--p != (wchar_t)'\\') && (*p != (wchar_t)'/'));
+        return ++p;
+    }
+    return path;
+}
+
 SRes WriteStream(const CSzArEx *db, Byte *buf, size_t size, size_t *writtenSize)
 {
     SRes res = SZ_OK;
@@ -184,12 +199,15 @@ SRes WriteStream(const CSzArEx *db, Byte *buf, size_t size, size_t *writtenSize)
 
     for (UInt32 i = 0; i < db->db.NumFiles; i++)
     {
+        if (db->db.Files[i].IsDir)
+            continue;
         wchar_t *fileName = NULL;
         CSzFile outFile;
         size_t fileUnpackedSize = 0;
         size_t bytesToWrite = 0;
 
         fileName = (wchar_t *)db->FileNames.data + db->FileNameOffsets[i];
+        fileName = BaseName(fileName);
         fileUnpackedSize = (size_t)db->db.Files[i].Size;
         wprintf(L"file %d: %s\n", i+1, fileName);
         

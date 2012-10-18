@@ -85,10 +85,10 @@ int main(int argc, char *argv[])
         unsigned long bytesWritten = 0;
 
         res = SzArEx_Extract(&db, &lookStream.s, 0,&blockIndex, &outBuffer, &outBufferSize, \
-            &offset, &outSizeProcessed, &allocImp, &allocTempImp);
-        res == SZ_OK ? printf("extr ok\n") : printf("extr not ok\n");
-        if (outSizeProcessed != outBufferSize)
-            printf("[!] buf size %d bytes, while processed %d bytes!", outBufferSize, outSizeProcessed);
+             &offset, &outSizeProcessed, &allocImp, &allocTempImp);
+        //res == SZ_OK ? printf("extr ok\n") : printf("extr not ok\n");
+        //if (outSizeProcessed != outBufferSize)
+        //    printf("[!] buf size %d bytes, while processed %d bytes!", outBufferSize, outSizeProcessed);
 
         //hOutFile = CreateFileW((LPCWSTR)db.FileNames.data, GENERIC_WRITE, 0, NULL, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL);
         //WriteFile(hOutFile, outBuffer, outBufferSize, &bytesWritten, NULL);
