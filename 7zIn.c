@@ -1372,8 +1372,7 @@ SRes SzArEx_Extract(
       {
         res = SzFolder_DecodeToFile(folder,
           p->db.PackSizes + p->FolderStartPackStreamIndex[folderIndex],
-          inStream, p, startOffset,
-          *outBuffer, unpackSize, allocTemp);
+          inStream, p, startOffset, unpackSize, allocTemp);
         if (res == SZ_OK)
         {
           if (folder->UnpackCRCDefined)
@@ -1399,4 +1398,72 @@ SRes SzArEx_Extract(
       res = SZ_ERROR_CRC;
   }
   return res;
+}
+
+
+// ======================================================================================================================
+SRes ExtractAllFiles(
+                    const CSzArEx *p,
+                    ILookInStream *inStream,
+                    UInt32 fileIndex,
+                    //UInt32 *blockIndex,
+                    //Byte **outBuffer,
+                    //size_t *outBufferSize,
+                    //size_t *offset,
+                    //size_t *outSizeProcessed,
+                    ISzAlloc *allocMain,
+                    ISzAlloc *allocTemp)
+{
+    UInt32 folderIndex = p->FileIndexToFolderIndexMap[fileIndex];
+    SRes res = SZ_OK;
+    //*offset = 0;
+    //*outSizeProcessed = 0;
+    //if (folderIndex == (UInt32)-1)
+    //{
+    //    IAlloc_Free(allocMain, *outBuffer);
+    //    *blockIndex = folderIndex;
+    //    *outBuffer = 0;
+    //    *outBufferSize = 0;
+    //    return SZ_OK;
+    //}
+
+    CSzFolder *folder = p->db.Folders + folderIndex;
+    UInt64 unpackSizeSpec = SzFolder_GetUnpackSize(folder);             // returns UnpackedSizes 6 086 757
+    size_t unpackSize = (size_t)unpackSizeSpec;
+    UInt64 startOffset = SzArEx_GetFolderStreamPos(p, folderIndex, 0);  // returns 32
+
+    if (unpackSize != unpackSizeSpec)
+        return SZ_ERROR_MEM;
+    //*blockIndex = folderIndex;
+
+    RINOK(LookInStream_SeekTo(inStream, startOffset));
+
+
+    res = SzFolder_DecodeToFile(folder,
+        p->db.PackSizes + p->FolderStartPackStreamIndex[folderIndex],
+        inStream, p, startOffset, unpackSize, allocTemp);
+
+
+    //if (res == SZ_OK)
+    //{
+    //    if (folder->UnpackCRCDefined)
+    //    {
+    //        if (CrcCalc(*outBuffer, unpackSize) != folder->UnpackCRC)
+    //            res = SZ_ERROR_CRC;
+    //    }
+    //}
+    //if (res == SZ_OK)
+    //{
+    //    UInt32 i;
+    //    CSzFileItem *fileItem = p->db.Files + fileIndex;
+    //    *offset = 0;
+    //    for (i = p->FolderStartFileIndex[folderIndex]; i < fileIndex; i++)
+    //        *offset += (UInt32)p->db.Files[i].Size;
+    //    *outSizeProcessed = (size_t)fileItem->Size;
+    //    if (*offset + *outSizeProcessed > *outBufferSize)
+    //        return SZ_ERROR_FAIL;
+    //    if (fileItem->CrcDefined && CrcCalc(*outBuffer + *offset, *outSizeProcessed) != fileItem->Crc)
+    //        res = SZ_ERROR_CRC;
+    //}
+    return res;
 }

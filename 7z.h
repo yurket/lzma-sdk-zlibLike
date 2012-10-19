@@ -189,7 +189,7 @@ SRes SzArEx_Extract(
 
 SRes SzFolder_DecodeToFile(const CSzFolder *folder, const UInt64 *packSizes,
                            ILookInStream *stream, const CSzArEx *db, UInt64 startPos,
-                           Byte *outBuffer, size_t outSize, ISzAlloc *allocMain);
+                           size_t outSize, ISzAlloc *allocMain);
 /*
 SzArEx_Open Errors:
 SZ_ERROR_NO_ARCHIVE

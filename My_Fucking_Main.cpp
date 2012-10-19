@@ -52,19 +52,7 @@ int main(int argc, char *argv[])
     res == SZ_OK ? printf("open archive ok\n") : printf("not ok\n");
     printf("file count: %d, NumPackSterams: %d, \n", db.db.NumFiles, db.db.NumPackStreams);
     printf("====================================================\n");
-    //printf("\n======= NAMES =========\n");
-    //{
-    //    wchar_t *start_pos = db.FileNames.data;
-    //    for (i = 0; i < db.db.NumFiles; )
-    //    {
-    //        if (*start_pos == (wchar_t *)0)
-    //        {
-    //            i++;
-    //            wprintf(L"%c\n", *start_pos++);
-    //            continue;
-    //        }
-    //        wprintf(L"%c", *start_pos++);
-    //    }
+
     //}
 
     for (i = 0, pOffsets = db.FileNameOffsets; i < db.db.NumFiles; i++)
