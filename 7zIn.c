@@ -1402,20 +1402,8 @@ SRes SzArEx_Extract(
 
 
 // ======================================================================================================================
-SRes ExtractAllFiles(
-                    const CSzArEx *p,
-                    ILookInStream *inStream,
-                    UInt32 fileIndex,
-                    //UInt32 *blockIndex,
-                    //Byte **outBuffer,
-                    //size_t *outBufferSize,
-                    //size_t *offset,
-                    //size_t *outSizeProcessed,
-                    ISzAlloc *allocMain,
-                    ISzAlloc *allocTemp)
+SRes ExtractAllFiles( const CSzArEx *p, ILookInStream *inStream, ISzAlloc *allocMain, ISzAlloc *allocTemp)
 {
-    UInt32 folderIndex = p->FileIndexToFolderIndexMap[fileIndex];
-    SRes res = SZ_OK;
     //*offset = 0;
     //*outSizeProcessed = 0;
     //if (folderIndex == (UInt32)-1)
@@ -1426,22 +1414,28 @@ SRes ExtractAllFiles(
     //    *outBufferSize = 0;
     //    return SZ_OK;
     //}
+    //UInt32 folderIndex = p->FileIndexToFolderIndexMap[fileIndex];
+    SRes res = SZ_OK;
+    for (UInt32 folderIndex = 0; folderIndex < p->db.NumFolders; folderIndex++)
+    {
+        CSzFolder *folder = p->db.Folders + folderIndex;
+        UInt64 unpackSizeSpec = SzFolder_GetUnpackSize(folder);             // returns UnpackedSizes 6 086 757
+        size_t unpackSize = (size_t)unpackSizeSpec;
+        UInt64 startOffset = SzArEx_GetFolderStreamPos(p, folderIndex, 0);  // returns 32
 
-    CSzFolder *folder = p->db.Folders + folderIndex;
-    UInt64 unpackSizeSpec = SzFolder_GetUnpackSize(folder);             // returns UnpackedSizes 6 086 757
-    size_t unpackSize = (size_t)unpackSizeSpec;
-    UInt64 startOffset = SzArEx_GetFolderStreamPos(p, folderIndex, 0);  // returns 32
+        if (unpackSize != unpackSizeSpec)
+            return SZ_ERROR_MEM;
 
-    if (unpackSize != unpackSizeSpec)
-        return SZ_ERROR_MEM;
-    //*blockIndex = folderIndex;
+        //*blockIndex = folderIndex;
 
-    RINOK(LookInStream_SeekTo(inStream, startOffset));
+        RINOK(LookInStream_SeekTo(inStream, startOffset));
+
+        res = SzFolder_DecodeToFile(folder,
+            p->db.PackSizes + p->FolderStartPackStreamIndex[folderIndex],       // FolderStartPackStreamIndex - щито о_О?
+            inStream, p, startOffset, unpackSize, allocTemp);
+    }
 
 
-    res = SzFolder_DecodeToFile(folder,
-        p->db.PackSizes + p->FolderStartPackStreamIndex[folderIndex],
-        inStream, p, startOffset, unpackSize, allocTemp);
 
 
     //if (res == SZ_OK)

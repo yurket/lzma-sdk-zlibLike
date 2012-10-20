@@ -72,8 +72,9 @@ int main(int argc, char *argv[])
         unsigned int outSizeProcessed = 0;
         unsigned long bytesWritten = 0;
 
-        res = SzArEx_Extract(&db, &lookStream.s, 0,&blockIndex, &outBuffer, &outBufferSize, \
-             &offset, &outSizeProcessed, &allocImp, &allocTempImp);
+        //res = SzArEx_Extract(&db, &lookStream.s, 0,&blockIndex, &outBuffer, &outBufferSize, \
+        //     &offset, &outSizeProcessed, &allocImp, &allocTempImp);
+        res = ExtractAllFiles(&db, &lookStream.s, &allocImp, &allocTempImp);
         //res == SZ_OK ? printf("extr ok\n") : printf("extr not ok\n");
         //if (outSizeProcessed != outBufferSize)
         //    printf("[!] buf size %d bytes, while processed %d bytes!", outBufferSize, outSizeProcessed);

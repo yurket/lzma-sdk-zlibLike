@@ -457,19 +457,13 @@ int MY_CDECL main(int numargs, char *args[])
             res = SZ_ERROR_FAIL;
             break;
           }
-          res = SzArEx_Extract(&db, &lookStream.s, i,
-              &blockIndex, &outBuffer, &outBufferSize,
-              &offset, &outSizeProcessed,
-              &allocImp, &allocTempImp);
-          if (res != SZ_OK)
-              break;
-          //processedSize = outSizeProcessed;
-          //if (File_Write(&outFile, outBuffer + offset, &processedSize) != 0 || processedSize != outSizeProcessed)
-          //{
-          //  PrintError("can not write output file");
-          //  res = SZ_ERROR_FAIL;
-          //  break;
-          //}
+          processedSize = outSizeProcessed;
+          if (File_Write(&outFile, outBuffer + offset, &processedSize) != 0 || processedSize != outSizeProcessed)
+          {
+            PrintError("can not write output file");
+            res = SZ_ERROR_FAIL;
+            break;
+          }
           if (File_Close(&outFile))
           {
             PrintError("can not close output file");
