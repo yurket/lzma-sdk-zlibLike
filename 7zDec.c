@@ -297,6 +297,7 @@ SizeT ApplyFilter(Byte *data, SizeT size, const UInt32 filter_type)
 
 #define IN_BUF_SIZE     (1 << 19)
 #define OUT_BUF_SIZE    (1 << 20)
+#define COPY_BUF_SIZE   (1 << 21)       // lzma_copy method
 
 static SRes SzDecodeLzmaToFileWithBuf(CSzCoderInfo *coder, const CSzArEx *db, ILookInStream *inStream, SizeT outSize, 
                                       ISzAlloc *allocMain, const UInt32 FILTER_TYPE)
@@ -384,10 +385,9 @@ static SRes SzDecodeLzmaToFileWithBuf(CSzCoderInfo *coder, const CSzArEx *db, IL
         }   
      }
     printf("I'm ALIVE! =) I unpacked %d(from %d) bytes and %d bytes left in input buffer\n", out_size, outSize, bytes_left);
-    // change memory free functions
-    delete [] myInBufBitch;
+    IAlloc_Free(allocMain, myInBufBitch);
     myInBufBitch = NULL;
-    delete [] myOutBufBitch;
+    IAlloc_Free(allocMain, myOutBufBitch);
     myOutBufBitch = NULL;
     File_Close(&outFile);
     LzmaDec_Free(&state, allocMain);
@@ -480,10 +480,9 @@ static SRes SzDecodeLzma2ToFileWithBuf(CSzCoderInfo *coder, const CSzArEx *db, I
         }   
     }
     printf("lzma2: I'm ALIVE! =) I unpacked %d(from %d) bytes and %d bytes left in input buffer\n", out_size, outSize, bytes_left);
-    // change memory free functions
-    delete [] myInBufBitch;
+    IAlloc_Free(allocMain, myInBufBitch);
     myInBufBitch = NULL;
-    delete [] myOutBufBitch;
+    IAlloc_Free(allocMain, myOutBufBitch);
     myOutBufBitch = NULL;
     File_Close(&outFile);
     Lzma2Dec_Free(&state, allocMain);
@@ -658,23 +657,29 @@ static SRes SzDecodeCopy(UInt64 inSize, ILookInStream *inStream, Byte *outBuffer
 }
 
 //fix it!!!
-static SRes SzDecodeCopyToFile(UInt64 inSize, ILookInStream *inStream, SizeT outSize)
+static SRes SzDecodeCopyToFileWithBuf(ILookInStream *inStream, SizeT outSize, ISzAlloc *allocMain)
 {
-    while (inSize > 0)
+    CSzFile outFile;
+    wchar_t *fileName = L"temp_all_copy.dat";
+    if (OutFile_OpenW(&outFile, fileName))
     {
-        void *inBuf;
-        char *outBuffer = NULL;     //fix it!!!
-        size_t curSize = (1 << 18);
-        if (curSize > inSize)
-            curSize = (size_t)inSize;
-        RINOK(inStream->Look((void *)inStream, (const void **)&inBuf, &curSize));
-        if (curSize == 0)
-            return SZ_ERROR_INPUT_EOF;
-        memcpy(outBuffer, inBuf, curSize);
-        outBuffer += curSize;
-        inSize -= curSize;
-        RINOK(inStream->Skip((void *)inStream, curSize));
+        wprintf(L"can not open output file \"%s\"\n", fileName);
+        return SZ_ERROR_FAIL;
     }
+    Byte *buf = (Byte *)IAlloc_Alloc(allocMain, COPY_BUF_SIZE);
+    SizeT out_size = 0, bytes_read = 0;
+
+    while (out_size < outSize)
+    {
+        SizeT rem = outSize - out_size;
+        bytes_read = (rem < COPY_BUF_SIZE) ? rem : COPY_BUF_SIZE;
+        RINOK(inStream->Read(inStream, buf, &bytes_read));
+        RINOK(File_Write(&outFile, buf, &bytes_read));
+        out_size += bytes_read;
+    }
+    printf("I'm ALIVE! =) I unpacked %d(from %d) bytes\n", out_size, outSize);
+    IAlloc_Free(allocMain, buf);
+    File_Close(&outFile);
     return SZ_OK;
 }
 static Bool IS_MAIN_METHOD(UInt32 m)
@@ -936,7 +941,7 @@ static SRes SzFolder_Decode2ToFile(const CSzFolder *folder, const UInt64 *packSi
 
             if (coder->MethodID == k_Copy)
             {
-                RINOK(SzDecodeCopyToFile(inSize, inStream, outSize));
+                RINOK(SzDecodeCopyToFileWithBuf(inStream, outSize, allocMain));
             }
             else if (coder->MethodID == k_LZMA)
             {
