@@ -489,6 +489,33 @@ static SRes SzDecodeLzma2ToFileWithBuf(CSzCoderInfo *coder, const CSzArEx *db, I
     return SZ_ERROR_DATA;
 }
 
+static SRes SzDecodeCopyToFileWithBuf(ILookInStream *inStream, SizeT outSize, ISzAlloc *allocMain)
+{
+    CSzFile outFile;
+    wchar_t *fileName = L"temp_all_copy.dat";
+    if (OutFile_OpenW(&outFile, fileName))
+    {
+        wprintf(L"can not open output file \"%s\"\n", fileName);
+        return SZ_ERROR_FAIL;
+    }
+    Byte *buf = (Byte *)IAlloc_Alloc(allocMain, COPY_BUF_SIZE);
+    SizeT out_size = 0, bytes_read = 0;
+
+    while (out_size < outSize)
+    {
+        SizeT rem = outSize - out_size;
+        bytes_read = (rem < COPY_BUF_SIZE) ? rem : COPY_BUF_SIZE;
+        RINOK(inStream->Read(inStream, buf, &bytes_read));
+        RINOK(File_Write(&outFile, buf, &bytes_read));
+        out_size += bytes_read;
+    }
+    printf("I'm ALIVE! =) I unpacked %d(from %d) bytes\n", out_size, outSize);
+    IAlloc_Free(allocMain, buf);
+    File_Close(&outFile);
+    return SZ_OK;
+}
+
+
 static SRes SzDecodeLzma2(CSzCoderInfo *coder, UInt64 inSize, ILookInStream *inStream,
     Byte *outBuffer, SizeT outSize, ISzAlloc *allocMain)
 {
@@ -656,32 +683,8 @@ static SRes SzDecodeCopy(UInt64 inSize, ILookInStream *inStream, Byte *outBuffer
   return SZ_OK;
 }
 
-//fix it!!!
-static SRes SzDecodeCopyToFileWithBuf(ILookInStream *inStream, SizeT outSize, ISzAlloc *allocMain)
-{
-    CSzFile outFile;
-    wchar_t *fileName = L"temp_all_copy.dat";
-    if (OutFile_OpenW(&outFile, fileName))
-    {
-        wprintf(L"can not open output file \"%s\"\n", fileName);
-        return SZ_ERROR_FAIL;
-    }
-    Byte *buf = (Byte *)IAlloc_Alloc(allocMain, COPY_BUF_SIZE);
-    SizeT out_size = 0, bytes_read = 0;
 
-    while (out_size < outSize)
-    {
-        SizeT rem = outSize - out_size;
-        bytes_read = (rem < COPY_BUF_SIZE) ? rem : COPY_BUF_SIZE;
-        RINOK(inStream->Read(inStream, buf, &bytes_read));
-        RINOK(File_Write(&outFile, buf, &bytes_read));
-        out_size += bytes_read;
-    }
-    printf("I'm ALIVE! =) I unpacked %d(from %d) bytes\n", out_size, outSize);
-    IAlloc_Free(allocMain, buf);
-    File_Close(&outFile);
-    return SZ_OK;
-}
+
 static Bool IS_MAIN_METHOD(UInt32 m)
 {
   switch(m)
