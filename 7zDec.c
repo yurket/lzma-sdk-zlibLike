@@ -247,14 +247,14 @@ static SRes SzDecodeLzmaToFile(CSzCoderInfo *coder, const CSzArEx *db, ILookInSt
 
         if (res != 0 || state.dicPos == state.dicBufSize || finished || stopDecoding)
         {
-            HRESULT res2 = WriteStream(db, state.dic, state.dicPos, &writtenBytes);
-            if (res != 0)
-                return S_FALSE;
-            RINOK(res2);
-            if (stopDecoding)
-                return S_OK;
-            if (finished)
-                return (status == LZMA_STATUS_FINISHED_WITH_MARK ? S_OK : S_FALSE);
+            //HRESULT res2 = WriteStream(db, state.dic, state.dicPos, &writtenBytes);           // made new functions
+            //if (res != 0)
+            //    return S_FALSE;
+            //RINOK(res2);
+            //if (stopDecoding)
+            //    return S_OK;
+            //if (finished)
+            //    return (status == LZMA_STATUS_FINISHED_WITH_MARK ? S_OK : S_FALSE);
         }
         if (state.dicPos == state.dicBufSize)
         {
@@ -318,15 +318,8 @@ static SRes SzDecodeLzmaToFileWithBuf(CSzCoderInfo *coder, const CSzArEx *db, IL
             return SZ_ERROR_MEM;
     }
 
-    // <HR>
-    CSzFile outFile;
-    wchar_t *fileName = L"temp_all.dat";
-    if (OutFile_OpenW(&outFile, fileName))
-    {
-        wprintf(L"can not open output file \"%s\"\n", fileName);
-        return SZ_ERROR_FAIL;
-    }
-    
+    wr_st_t st;
+    write_state_init(st);
     size_t in_buf_size = 0, in_offset = 0;
     size_t out_size = 0;
     size_t bytes_read, bytes_left;
@@ -353,7 +346,6 @@ static SRes SzDecodeLzmaToFileWithBuf(CSzCoderInfo *coder, const CSzArEx *db, IL
         LzmaDec_DecodeToBuf(&state, myOutBufBitch, &out_buf_size, myInBufBitch + in_offset, &in_buf_size, finishMode, &status);
         if (in_buf_size == 0)
         {
-            RINOK(File_Write(&outFile, myOutBufBitch, &out_buf_size));
             StopDecoding = true;
             printf("something bad happened =( \n");
             return SZ_ERROR_FAIL;
@@ -371,8 +363,9 @@ static SRes SzDecodeLzmaToFileWithBuf(CSzCoderInfo *coder, const CSzArEx *db, IL
         StopDecoding = (out_size >= outSize)? true : false;
         if (bytes_left == 0 || out_buf_size == OUT_BUF_SIZE || StopDecoding)   // whole in_buf was decompressed
         {
-            //ApplyFilter(myOutBufBitch, out_buf_size, FILTER_TYPE);
-            RINOK(File_Write(&outFile, myOutBufBitch, &out_buf_size));
+            WriteStream(db, myOutBufBitch, out_buf_size, &st);
+        //    ApplyFilter(myOutBufBitch, out_buf_size, FILTER_TYPE);
+        //    RINOK(File_Write(&outFile, myOutBufBitch, &out_buf_size));
 
             if (bytes_left == 0)
             {
@@ -383,13 +376,13 @@ static SRes SzDecodeLzmaToFileWithBuf(CSzCoderInfo *coder, const CSzArEx *db, IL
             if (StopDecoding)
                 break;
         }   
+        
      }
     printf("I'm ALIVE! =) I unpacked %d(from %d) bytes and %d bytes left in input buffer\n", out_size, outSize, bytes_left);
     IAlloc_Free(allocMain, myInBufBitch);
     myInBufBitch = NULL;
     IAlloc_Free(allocMain, myOutBufBitch);
     myOutBufBitch = NULL;
-    File_Close(&outFile);
     LzmaDec_Free(&state, allocMain);
     return SZ_ERROR_DATA;
 }
@@ -413,15 +406,8 @@ static SRes SzDecodeLzma2ToFileWithBuf(CSzCoderInfo *coder, const CSzArEx *db, I
             return SZ_ERROR_MEM;
     }
 
-    // <HR>
-    CSzFile outFile;
-    wchar_t *fileName = L"temp_all_lzma2.dat";
-    if (OutFile_OpenW(&outFile, fileName))
-    {
-        wprintf(L"can not open output file \"%s\"\n", fileName);
-        return SZ_ERROR_FAIL;
-    }
-
+    wr_st_t st;
+    write_state_init(st);
     size_t in_buf_size = 0, in_offset = 0;
     size_t out_size = 0;
     size_t bytes_read, bytes_left;
@@ -433,7 +419,7 @@ static SRes SzDecodeLzma2ToFileWithBuf(CSzCoderInfo *coder, const CSzArEx *db, I
         ELzmaFinishMode finishMode = LZMA_FINISH_ANY;
         ELzmaStatus status;
 
-        if (to_read)                            // if more than 1 folder in db, it can be read part of next folder stream ->
+        if (to_read)                            // if more than 1 folder in db, part of next folder stream can be read ->
         {                                       // it's not a problem, because before unpacking new db folder it seeks to right position
             bytes_read = IN_BUF_SIZE;   
             RINOK(inStream->Read(inStream, myInBufBitch, &bytes_read));
@@ -448,7 +434,6 @@ static SRes SzDecodeLzma2ToFileWithBuf(CSzCoderInfo *coder, const CSzArEx *db, I
         Lzma2Dec_DecodeToBuf(&state, myOutBufBitch, &out_buf_size, myInBufBitch + in_offset, &in_buf_size, finishMode, &status);
         if (in_buf_size == 0)
         {
-            RINOK(File_Write(&outFile, myOutBufBitch, &out_buf_size));
             StopDecoding = true;
             printf("lzma2 decode: something bad happened =( \n");
             return SZ_ERROR_FAIL;
@@ -467,8 +452,8 @@ static SRes SzDecodeLzma2ToFileWithBuf(CSzCoderInfo *coder, const CSzArEx *db, I
         if (bytes_left == 0 || out_buf_size == OUT_BUF_SIZE || StopDecoding)   // whole in_buf was decompressed
         {
             //ApplyFilter(myOutBufBitch, out_buf_size, FILTER_TYPE);
-            RINOK(File_Write(&outFile, myOutBufBitch, &out_buf_size));
-
+            //RINOK(File_Write(&outFile, myOutBufBitch, &out_buf_size));
+            WriteStream(db, myOutBufBitch, out_buf_size, &st);
             if (bytes_left == 0)
             {
                 to_read = true;
@@ -484,7 +469,6 @@ static SRes SzDecodeLzma2ToFileWithBuf(CSzCoderInfo *coder, const CSzArEx *db, I
     myInBufBitch = NULL;
     IAlloc_Free(allocMain, myOutBufBitch);
     myOutBufBitch = NULL;
-    File_Close(&outFile);
     Lzma2Dec_Free(&state, allocMain);
     return SZ_ERROR_DATA;
 }
@@ -638,14 +622,14 @@ static SRes SzDecodeLzma2ToFile(CSzCoderInfo *coder, const CSzArEx *db, ILookInS
         if (res != 0 || state.decoder.dicPos == state.decoder.dicBufSize || finished || stopDecoding)
         {
 
-            HRESULT res2 = WriteStream(db, state.decoder.dic, state.decoder.dicPos, &writtenBytes);
-            if (res != 0)
-                return S_FALSE;
-            RINOK(res2);
-            if (stopDecoding)
-                return S_OK;
-            if (finished)
-                return (status == LZMA_STATUS_FINISHED_WITH_MARK ? S_OK : S_FALSE);
+            //HRESULT res2 = WriteStream(db, state.decoder.dic, state.decoder.dicPos, &writtenBytes);       // made new func
+            //if (res != 0)
+            //    return S_FALSE;
+            //RINOK(res2);
+            //if (stopDecoding)
+            //    return S_OK;
+            //if (finished)
+            //    return (status == LZMA_STATUS_FINISHED_WITH_MARK ? S_OK : S_FALSE);
         }
         if (state.decoder.dicPos == state.decoder.dicBufSize)
         {
@@ -948,7 +932,7 @@ static SRes SzFolder_Decode2ToFile(const CSzFolder *folder, const UInt64 *packSi
             }
             else if (coder->MethodID == k_LZMA)
             {
-                SzDecodeLzmaToFileWithBuf(coder, db, inStream, outSize, allocMain, FilterType);
+                RINOK(SzDecodeLzmaToFileWithBuf(coder, db, inStream, outSize, allocMain, FilterType));
 //                    RINOK(SzDecodeLzmaToFile(coder, db, inStream, outSize, allocMain));
             }
             else if (coder->MethodID == k_LZMA2)
