@@ -294,10 +294,27 @@ SizeT ApplyFilter(Byte *data, SizeT size, const UInt32 filter_type)
     return processed;
 }
 
+// ===================================== defines and macros ========================================
 
 #define IN_BUF_SIZE     (1 << 19)
 #define OUT_BUF_SIZE    (1 << 20)
 #define COPY_BUF_SIZE   (1 << 21)       // lzma_copy method
+
+#define ALLOCATE_BUFS(in_buf, out_buf)   {                                                              \
+                                            out_buf = (Byte *)IAlloc_Alloc(allocMain, OUT_BUF_SIZE);    \
+                                            in_buf = (Byte *)IAlloc_Alloc(allocMain, IN_BUF_SIZE);      \
+                                            if (in_buf == NULL || out_buf == NULL)                      \
+                                                return SZ_ERROR_MEM;                                    \
+                                         }                                                              \
+
+#define FREE_BUFS(in_buf, out_buf)      {                                         \
+                                            IAlloc_Free(allocMain, in_buf);       \
+                                            in_buf = NULL;                        \
+                                            IAlloc_Free(allocMain, out_buf);      \
+                                            out_buf = NULL;                       \
+                                        }                                         \
+
+// =================================================================================================
 
 static SRes SzDecodeLzmaToFileWithBuf(CSzCoderInfo *coder, const CSzArEx *db, ILookInStream *inStream, SizeT outSize, 
                                       ISzAlloc *allocMain, const UInt32 FILTER_TYPE)
@@ -311,12 +328,7 @@ static SRes SzDecodeLzmaToFileWithBuf(CSzCoderInfo *coder, const CSzArEx *db, IL
     LzmaDec_Init(&state);
     
     if (myInBufBitch == NULL)
-    {
-        myOutBufBitch = (Byte *)IAlloc_Alloc(allocMain, OUT_BUF_SIZE);
-        myInBufBitch = (Byte *)IAlloc_Alloc(allocMain, IN_BUF_SIZE);
-        if (myInBufBitch == NULL || myOutBufBitch == NULL)
-            return SZ_ERROR_MEM;
-    }
+        ALLOCATE_BUFS(myInBufBitch, myOutBufBitch);
 
     wr_st_t st;
     write_state_init(st);
@@ -379,10 +391,8 @@ static SRes SzDecodeLzmaToFileWithBuf(CSzCoderInfo *coder, const CSzArEx *db, IL
         
      }
     printf("I'm ALIVE! =) I unpacked %d(from %d) bytes and %d bytes left in input buffer\n", out_size, outSize, bytes_left);
-    IAlloc_Free(allocMain, myInBufBitch);
-    myInBufBitch = NULL;
-    IAlloc_Free(allocMain, myOutBufBitch);
-    myOutBufBitch = NULL;
+
+    FREE_BUFS(myInBufBitch, myOutBufBitch);
     LzmaDec_Free(&state, allocMain);
     return SZ_ERROR_DATA;
 }
@@ -399,12 +409,7 @@ static SRes SzDecodeLzma2ToFileWithBuf(CSzCoderInfo *coder, const CSzArEx *db, I
     Lzma2Dec_Init(&state);
 
     if (myInBufBitch == NULL)
-    {
-        myOutBufBitch = (Byte *)IAlloc_Alloc(allocMain, OUT_BUF_SIZE);
-        myInBufBitch = (Byte *)IAlloc_Alloc(allocMain, IN_BUF_SIZE);
-        if (myInBufBitch == NULL || myOutBufBitch == NULL)
-            return SZ_ERROR_MEM;
-    }
+        ALLOCATE_BUFS(myInBufBitch, myOutBufBitch);
 
     wr_st_t st;
     write_state_init(st);
@@ -465,10 +470,7 @@ static SRes SzDecodeLzma2ToFileWithBuf(CSzCoderInfo *coder, const CSzArEx *db, I
         }   
     }
     printf("lzma2: I'm ALIVE! =) I unpacked %d(from %d) bytes and %d bytes left in input buffer\n", out_size, outSize, bytes_left);
-    IAlloc_Free(allocMain, myInBufBitch);
-    myInBufBitch = NULL;
-    IAlloc_Free(allocMain, myOutBufBitch);
-    myOutBufBitch = NULL;
+    FREE_BUFS(myInBufBitch, myOutBufBitch);
     Lzma2Dec_Free(&state, allocMain);
     return SZ_ERROR_DATA;
 }
