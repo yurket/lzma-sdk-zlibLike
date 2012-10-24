@@ -31,4 +31,4 @@ typedef struct write_state
                                                     continue;                                           \
                                                 }                                                       \
 
-SRes WriteStream(const CSzArEx *db, Byte *buf, size_t size, pwr_st_t st);
+SRes WriteStream(const UInt32 folderIndex, const CSzArEx *db, Byte *buf, size_t size, pwr_st_t st);

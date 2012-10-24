@@ -189,13 +189,16 @@ static wchar_t * BaseName(wchar_t *path)
     return path;
 }
 
-SizeT CountBytesToWrite(const CSzArEx *db, size_t buf_size, pwr_st_t st)
+SizeT CountBytesToWrite(const UInt32 folderIndex, const CSzArEx *db, size_t buf_size, pwr_st_t st)
 {
     const SizeT startOffset = st->bytesWritten;
     SizeT filesOffsetSums = 0;
     SizeT bytesToWriteInCurFile = 0;
     for (UInt32 i = 0; i < db->db.NumFiles; i++)
     {
+        if (db->FileIndexToFolderIndexMap[i] != folderIndex)        // skip files from others folders
+            continue;
+
         CSzFileItem &curFile = db->db.Files[i];
         if (curFile.IsDir)
             continue;
@@ -220,7 +223,7 @@ SizeT CountBytesToWrite(const CSzArEx *db, size_t buf_size, pwr_st_t st)
     return 0;
 }
 
-SRes WriteStream(const CSzArEx *db, Byte *buf, size_t buf_size, pwr_st_t st)
+SRes WriteStream(const UInt32 folderIndex, const CSzArEx *db, Byte *buf, size_t buf_size, pwr_st_t st)
 {
     SRes res = SZ_OK;
     SizeT offset = 0;
@@ -232,7 +235,7 @@ SRes WriteStream(const CSzArEx *db, Byte *buf, size_t buf_size, pwr_st_t st)
     while (buf_size)
     {
         wchar_t *fileName = NULL;
-        SizeT bytesToWrite = CountBytesToWrite(db, buf_size, st);
+        SizeT bytesToWrite = CountBytesToWrite(folderIndex, db, buf_size, st);
         for (UInt32 i = 0; i < db->db.NumFiles; i++)
         {
             CSzFileItem &curFile = db->db.Files[i];
