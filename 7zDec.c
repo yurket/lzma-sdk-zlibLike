@@ -394,7 +394,7 @@ static SRes SzDecodeLzmaToFileWithBuf(const UInt32 folderIndex, CSzCoderInfo *co
 
     FREE_BUFS(myInBufBitch, myOutBufBitch);
     LzmaDec_Free(&state, allocMain);
-    return SZ_ERROR_DATA;
+    return SZ_OK;
 }
 
 static SRes SzDecodeLzma2ToFileWithBuf(const UInt32 folderIndex, CSzCoderInfo *coder, const CSzArEx *db, ILookInStream *inStream, SizeT outSize, 
@@ -472,7 +472,7 @@ static SRes SzDecodeLzma2ToFileWithBuf(const UInt32 folderIndex, CSzCoderInfo *c
     printf("lzma2: I'm ALIVE! =) I unpacked %d(from %d) bytes and %d bytes left in input buffer\n", out_size, outSize, bytes_left);
     FREE_BUFS(myInBufBitch, myOutBufBitch);
     Lzma2Dec_Free(&state, allocMain);
-    return SZ_ERROR_DATA;
+    return SZ_OK;
 }
 
 static SRes SzDecodeCopyToFileWithBuf(const UInt32 folderIndex, ILookInStream *inStream, SizeT outSize, ISzAlloc *allocMain)
