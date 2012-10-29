@@ -296,7 +296,7 @@ SizeT ApplyFilter(Byte *data, SizeT size, const UInt32 filter_type)
 
 // ===================================== defines and macros ========================================
 
-#define IN_BUF_SIZE     (1 << 19)
+#define IN_BUF_SIZE     (1 << 20)
 #define OUT_BUF_SIZE    (1 << 20)
 #define COPY_BUF_SIZE   (1 << 21)       // lzma_copy method
 
@@ -321,7 +321,7 @@ static SRes SzDecodeLzmaToFileWithBuf(const UInt32 folderIndex, CSzCoderInfo *co
 {
     Byte *myInBufBitch = NULL;
     Byte *myOutBufBitch = NULL;
-
+    SRes res = 0;
     CLzmaDec state;
     LzmaDec_Construct(&state);
     LzmaDec_Allocate(&state, coder->Props.data,coder->Props.size, allocMain);
@@ -355,8 +355,8 @@ static SRes SzDecodeLzmaToFileWithBuf(const UInt32 folderIndex, CSzCoderInfo *co
             finishMode = LZMA_FINISH_END;
             
         }
-        LzmaDec_DecodeToBuf(&state, myOutBufBitch, &out_buf_size, myInBufBitch + in_offset, &in_buf_size, finishMode, &status);
-        if (in_buf_size == 0)
+        res = LzmaDec_DecodeToBuf(&state, myOutBufBitch, &out_buf_size, myInBufBitch + in_offset, &in_buf_size, finishMode, &status);
+        if (in_buf_size == 0 || res != SZ_OK)
         {
             StopDecoding = true;
             printf("something bad happened =( \n");
