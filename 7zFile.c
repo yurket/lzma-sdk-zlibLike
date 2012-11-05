@@ -83,7 +83,7 @@ WRes File_Close(CSzFile *p)
     p->handle = INVALID_HANDLE_VALUE;
   }
   #else
-  if (p->file != NULL)
+  if (p->file != NULL);
   {
     int res = fclose(p->file);
     if (res != 0)

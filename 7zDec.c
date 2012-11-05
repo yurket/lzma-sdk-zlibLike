@@ -279,12 +279,13 @@ static SRes SzDecodeLzmaToFile(CSzCoderInfo *coder, const CSzArEx *db, ILookInSt
 
 // ===================================== defines and macroses ========================================
 
-#define IN_BUF_SIZE     (1 << 20)
+#define IN_BUF_SIZE     (1 << 19)
 #define OUT_BUF_SIZE    (1 << 20)
 #define COPY_BUF_SIZE   (1 << 21)       // lzma_copy method
 
 
 #define DECODING        0
+#define ENCODING        1
 
 #define ALLOCATE_BUFS(in_buf, out_buf)   {                                                              \
                                             out_buf = (Byte *)IAlloc_Alloc(allocMain, OUT_BUF_SIZE);    \
@@ -324,28 +325,33 @@ struct BCJ_state
 
 static SizeT ApplyFilter(Byte *data, SizeT *size, const UInt32 filter_type, BCJ_state *st, bool last_time)
 {
-    UInt32 state = 0;
-    UInt32 processed = 0, retain_bytes;
-    if (st->buf_size)
-        memcpy(st->decode_buf, st->buf, st->buf_size);
-    memcpy(st->decode_buf + st->buf_size, data, *size);
-    UInt32 decode_buf_size = *size + st->buf_size;
-    processed = x86_Convert(st->decode_buf, decode_buf_size, st->ip, &st->x86_state, DECODING);
-    st->ip += processed;
-    retain_bytes = decode_buf_size - processed;
-    if (retain_bytes > BCJ_BUF_SIZE)
+    if ( filter_type == k_BCJ)
     {
-        printf("emm.. tut kak by bufera ne hvataet, naprimer...\n");
-        return SZ_ERROR_MEM;
-    }
-    memcpy(st->buf, st->decode_buf + processed, retain_bytes);
-    st->buf_size = retain_bytes;
-    if (last_time)
-        processed += retain_bytes;
-    memcpy(data, st->decode_buf, processed);
-    *size = processed;
+        UInt32 state = 0;
+        UInt32 processed = 0, retain_bytes;
+        if (st->buf_size)
+            memcpy(st->decode_buf, st->buf, st->buf_size);
+        memcpy(st->decode_buf + st->buf_size, data, *size);
+        UInt32 decode_buf_size = *size + st->buf_size;
+        processed = x86_Convert(st->decode_buf, decode_buf_size, st->ip, &st->x86_state, DECODING);
+        st->ip += processed;
+        retain_bytes = decode_buf_size - processed;
+        if (retain_bytes > BCJ_BUF_SIZE)
+        {
+            printf("emm.. tut kak by bufera ne hvataet, naprimer...\n");
+            return SZ_ERROR_MEM;
+        }
+        memcpy(st->buf, st->decode_buf + processed, retain_bytes);
+        st->buf_size = retain_bytes;
+        if (last_time)
+            processed += retain_bytes;
+        memcpy(data, st->decode_buf, processed);
+        *size = processed;
 
-    return processed;
+        return processed;
+    }
+
+    return 0;
 }
 
 static SRes SzDecodeLzmaToFileWithBuf(const UInt32 folderIndex, CSzCoderInfo *coder, const CSzArEx *db, ILookInStream *inStream, SizeT outSize, 
@@ -411,7 +417,10 @@ static SRes SzDecodeLzmaToFileWithBuf(const UInt32 folderIndex, CSzCoderInfo *co
         {
             bool last_time = StopDecoding ? true : false;
             ApplyFilter(myOutBufBitch, &out_buf_size, FILTER_TYPE, &bcj_st, last_time);
-            WriteStream(folderIndex, db, myOutBufBitch, out_buf_size, &st);
+            if (FILTER_TYPE == k_BCJ2)
+                WriteTempStream(myOutBufBitch, out_buf_size, StopDecoding, &st);
+            else
+                WriteStream(folderIndex, db, myOutBufBitch, out_buf_size, &st);
         
         //    RINOK(File_Write(&outFile, myOutBufBitch, &out_buf_size));
 
@@ -497,7 +506,10 @@ static SRes SzDecodeLzma2ToFileWithBuf(const UInt32 folderIndex, CSzCoderInfo *c
         {
             bool last_time = StopDecoding ? true : false;
             ApplyFilter(myOutBufBitch, &out_buf_size, FILTER_TYPE, &bcj_st, last_time);
-            WriteStream(folderIndex, db, myOutBufBitch, out_buf_size, &st);
+            if (FILTER_TYPE == k_BCJ2)
+                WriteTempStream(myOutBufBitch, out_buf_size, StopDecoding, &st);
+            else
+                WriteStream(folderIndex, db, myOutBufBitch, out_buf_size, &st);
             if (bytes_left == 0)
             {
                 to_read = true;
@@ -938,27 +950,71 @@ SRes SzFolder_Decode(const CSzFolder *folder, const UInt64 *packSizes,
   return res;
 }
 
+
+
+static UInt32 DetectFilter(const CSzFolder *folder)
+{
+    if (folder->NumCoders == 2 && folder->Coders[1].MethodID == k_BCJ )
+        return k_BCJ;
+    else if (folder->NumCoders == 4 && folder->Coders[3].MethodID == k_BCJ2)
+        return k_BCJ2;
+    else
+        return 0;
+}
+
 static SRes SzFolder_Decode2ToFile(const CSzFolder *folder, const UInt32 folderIndex, const UInt64 *packSizes,
                              ILookInStream *inStream, const CSzArEx *db, UInt64 startPos,
                              SizeT outSize, ISzAlloc *allocMain, Byte *tempBuf[])
 {
     UInt32 ci;
+    SizeT total_out_size = outSize;
     SizeT tempSizes[3] = { 0, 0, 0};
-    SizeT tempSize3 = 0;
-    Byte *tempBuf3 = 0;
+    //SizeT tempSize3 = 0;
+    //Byte *tempBuf3 = 0;
 
     RINOK(CheckSupportedFolder(folder));
 
     for (ci = 0; ci < folder->NumCoders; ci++)
     {
         CSzCoderInfo *coder = &folder->Coders[ci];
-        const CSzCoderInfo * next_coder = (folder->NumCoders == 2) ? &folder->Coders[ci+1] : NULL;
-        const UInt32 FilterType = (next_coder != NULL)?(UInt32)next_coder->MethodID : 0;
+        const UInt32 FilterType = DetectFilter(folder);
         if (IS_MAIN_METHOD((UInt32)coder->MethodID))
         {
             UInt32 si = 0;
             UInt64 offset;
             UInt64 inSize;
+            Byte *outBufCur = NULL;
+            
+            SizeT outSizeCur = outSize;
+            bool unpackInMem = false;                               // for small buffers within unpacking BCJ2
+            if (folder->NumCoders == 4)
+            {
+                UInt32 indices[] = { 3, 2, 0 };
+                UInt64 unpackSize = folder->UnpackSizes[ci];        // 4176, 9k, 10.610.492,
+                si = indices[ci];                                   // 3, 2, 0
+                if (ci < 2)
+                {
+                    Byte *temp;
+                    unpackInMem = true;
+                    outSizeCur = (SizeT)unpackSize;                   // 4176, 9k,
+                    if (outSizeCur != unpackSize)
+                        return SZ_ERROR_MEM;
+                    temp = (Byte *)IAlloc_Alloc(allocMain, outSizeCur);
+                    if (temp == 0 && outSizeCur != 0)
+                        return SZ_ERROR_MEM;
+                    outBufCur = tempBuf[1 - ci] = temp;
+                    tempSizes[1 - ci] = outSizeCur;
+                }
+                else if (ci == 2)
+                {
+                    if (unpackSize > outSize) /* check it */
+                        return SZ_ERROR_PARAM;
+                    //tempBuf3 = outBufCur = outBuffer + (outSize - (size_t)unpackSize);
+                    outSize = outSizeCur = (SizeT)unpackSize;
+                }
+                else
+                    return SZ_ERROR_UNSUPPORTED;
+            }
 
             offset = GetSum(packSizes, si);
             inSize = packSizes[si];
@@ -966,16 +1022,37 @@ static SRes SzFolder_Decode2ToFile(const CSzFolder *folder, const UInt32 folderI
 
             if (coder->MethodID == k_Copy)
             {
-                RINOK(SzDecodeCopyToFileWithBuf(folderIndex, db, inStream, outSize, allocMain));
+                if (unpackInMem) 
+                {
+                    RINOK(SzDecodeCopy(inSize, inStream, outBufCur));
+                }
+                else
+                {
+                    RINOK(SzDecodeCopyToFileWithBuf(folderIndex, db, inStream, outSize, allocMain));
+                }
             }
             else if (coder->MethodID == k_LZMA)
             {
-                RINOK(SzDecodeLzmaToFileWithBuf(folderIndex, coder, db, inStream, outSize, allocMain, FilterType));
+                if (unpackInMem)
+                {
+                    RINOK(SzDecodeLzma(coder, inSize, inStream, outBufCur, outSizeCur, allocMain));
+                }
+                else
+                {
+                    RINOK(SzDecodeLzmaToFileWithBuf(folderIndex, coder, db, inStream, outSize, allocMain, FilterType));
 //                    RINOK(SzDecodeLzmaToFile(coder, db, inStream, outSize, allocMain));
+                }
             }
             else if (coder->MethodID == k_LZMA2)
             {
-                RINOK(SzDecodeLzma2ToFileWithBuf(folderIndex, coder, db, inStream, outSize, allocMain, FilterType)); 
+                if (unpackInMem)
+                {
+                    RINOK(SzDecodeLzma2(coder, inSize, inStream, outBufCur, outSizeCur, allocMain));
+                }
+                else
+                {
+                    RINOK(SzDecodeLzma2ToFileWithBuf(folderIndex, coder, db, inStream, outSize, allocMain, FilterType)); 
+                }
                 //RINOK(SzDecodeLzma2(coder, inSize, inStream, outBufCur, outSizeCur, allocMain));
             }
             else
@@ -990,7 +1067,7 @@ static SRes SzFolder_Decode2ToFile(const CSzFolder *folder, const UInt32 folderI
         else if (coder->MethodID == k_BCJ2)
         {
             printf("BCJ2 filter in coder # %d\n", ci+1);
- /*           UInt64 offset = GetSum(packSizes, 1);
+            UInt64 offset = GetSum(packSizes, 1);
             UInt64 s3Size = packSizes[1];
             SRes res;
             if (ci != 3)
@@ -1004,14 +1081,46 @@ static SRes SzFolder_Decode2ToFile(const CSzFolder *folder, const UInt32 folderI
                 return SZ_ERROR_MEM;
             res = SzDecodeCopy(s3Size, inStream, tempBuf[2]);
             RINOK(res)
+            {
+                Byte *myInBufBitch = NULL, *myOutBufBitch = NULL;
+                Byte bcj2PrevByte = 0;
+                wr_st_t wr_st;
+                write_state_init(wr_st);
+                r_st_t r_st;
+                read_state_init(r_st);
+                Bcj2_dec_state bcj2_st;
+                Bcj2_dec_state_init(bcj2_st);
+                bcj2_st.buf1 = tempBuf[0];
+                bcj2_st.buf2 = tempBuf[1];
+                bcj2_st.buf3 = tempBuf[2];
+                UInt64 _total_size = 0;
+                if (myInBufBitch == NULL)
+                    ALLOCATE_BUFS(myInBufBitch, myOutBufBitch);
 
-                res = Bcj2_Decode(
-                tempBuf3, tempSize3,
-                tempBuf[0], tempSizes[0],
-                tempBuf[1], tempSizes[1],
-                tempBuf[2], tempSizes[2],
-                outBuffer, outSize);
-            RINOK(res)*/
+                while (total_out_size)
+                {
+                    SizeT myInBusSize = IN_BUF_SIZE, myOutBufSize = OUT_BUF_SIZE;
+                    SizeT processed = 0, bytes_read = IN_BUF_SIZE;
+                    //SizeT rem = total_out_size - out_size;
+                    //bytes_read = (rem < IN_BUF_SIZE) ? rem : IN_BUF_SIZE;
+                    RINOK(ReadTempStream(myInBufBitch, &bytes_read, &r_st));
+
+                    processed = Bcj2_DecodeToFileWithBufs(
+                        myInBufBitch, bytes_read,
+                        bcj2_st.buf1, &tempSizes[0],
+                        bcj2_st.buf2, &tempSizes[1],
+                        bcj2_st.buf3, &tempSizes[2],
+                        myOutBufBitch, myOutBufSize,
+                        &bcj2_st);
+                    if (processed == 0)
+                        break;
+                    RINOK(WriteStream(folderIndex, db, myOutBufBitch, processed, &wr_st));
+                    total_out_size -= processed;
+                }
+
+                FREE_BUFS(myInBufBitch, myOutBufBitch);
+            }
+            RINOK(res)
         }
         else    // BCJ
         {

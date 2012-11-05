@@ -249,7 +249,7 @@ SRes WriteStream(const UInt32 folderIndex, const CSzArEx *db, Byte *buf, size_t 
 
         if (!st->fileOpened)
         {
-            OPEN_FILE(&st->out_file, fileName);
+            OPEN_FILE_OUT(&st->out_file, fileName);
             st->fileOpened = true;
         }
 
@@ -317,5 +317,61 @@ SRes WriteStream(const UInt32 folderIndex, const CSzArEx *db, Byte *buf, size_t 
     //    
     //}
 
+    return res;
+}
+
+
+SRes WriteTempStream(Byte *buf, size_t buf_size, bool StopWriting, pwr_st_t st)
+{
+    SRes res = SZ_OK;
+    wchar_t *fileName = L"temp.dat";
+    if (buf == NULL)
+        return SZ_ERROR_DATA;
+    if (buf_size == 0)
+        return SZ_OK;
+    if (!st->fileOpened)
+    {
+        OPEN_FILE_OUT(&st->out_file, fileName);
+        st->fileOpened = true;
+    }
+
+    while (buf_size)
+    {
+        SizeT bytes_to_write = buf_size;
+        F_WRITE(&st->out_file, buf, &bytes_to_write);
+        buf_size -= bytes_to_write;
+    }
+
+    if (StopWriting)
+    {
+        File_Close(&st->out_file);
+        st->fileOpened = false;
+    }
+
+    return res;
+}
+SRes ReadTempStream(Byte *buf, size_t *buf_size, pr_st_t st)
+{
+    SRes res = SZ_OK;
+    wchar_t *fileName = L"temp.dat";
+    if (buf == NULL)
+        return SZ_ERROR_DATA;
+    if (*buf_size == 0)
+        return SZ_OK;
+    if (!st->fileOpened)
+    {
+        OPEN_FILE_IN(&st->in_file, fileName);
+        st->fileOpened = true;
+    }
+
+    SizeT bytes_to_read = *buf_size;
+    F_READ(&st->in_file, buf, &bytes_to_read);
+    *buf_size = bytes_to_read;
+
+    if (bytes_to_read < *buf_size || res )
+    {
+        File_Close(&st->in_file);
+        st->fileOpened = false;
+    }
     return res;
 }
