@@ -2,11 +2,8 @@
 2008-10-04 : Igor Pavlov : Public domain */
 
 #include "Bcj2.h"
-#include <stdio.h>
-
 #define IsJcc(b0, b1) ((b0) == 0x0F && ((b1) & 0xF0) == 0x80)
 #define IsJ(b0, b1) ((b1 & 0xFE) == 0xE8 || IsJcc(b0, b1))
-
 
 
 #define RC_READ_BYTE (*buffer++)
@@ -19,17 +16,6 @@
 #define IF_BIT_0(p) ttt = *(p); bound = (range >> kNumBitModelTotalBits) * ttt; if (code < bound)
 #define UPDATE_0(p) range = bound; *(p) = (CProb)(ttt + ((kBitModelTotal - ttt) >> kNumMoveBits)); NORMALIZE;
 #define UPDATE_1(p) range -= bound; code -= bound; *(p) = (CProb)(ttt - (ttt >> kNumMoveBits)); NORMALIZE;
-
-//===============================================================================================================
-
-#define _RC_INIT2 code = 0; range = 0xFFFFFFFF; \
-  { int i; for (i = 0; i < 5; i++) { RC_TEST; code = (code << 8) | RC_READ_BYTE; }}
-
-#define _NORMALIZE if (range < kTopValue) { RC_TEST; range <<= 8; code = (code << 8) | RC_READ_BYTE; }
-
-#define _IF_BIT_0(p) ttt = *(p); bound = (range >> kNumBitModelTotalBits) * ttt; if (code < bound)
-#define _UPDATE_0(p) range = bound; *(p) = (CProb)(ttt + ((kBitModelTotal - ttt) >> kNumMoveBits)); _NORMALIZE;
-#define _UPDATE_1(p) range -= bound; code -= bound; *(p) = (CProb)(ttt - (ttt >> kNumMoveBits)); _NORMALIZE;
 
 #define SAVE_STATE(st) {    st->range = range; st->code = code; st->bound = bound;  \
                             st->ttt = ttt; st->b = b; st->prev_byte = prevByte;     \
@@ -140,6 +126,7 @@ int Bcj2_Decode(
 
 
 
+
 int Bcj2_DecodeToFileWithBufs(
                 const Byte *buf0, SizeT size0,
                 Byte *buf1, SizeT *size1,
@@ -162,19 +149,14 @@ int Bcj2_DecodeToFileWithBufs(
     UInt32 bound = st->bound;
     UInt32 ttt = st->ttt;
 
-    //unsigned int i;
-    //for (i = 0; i < sizeof(p) / sizeof(p[0]); i++)
-    //    p[i] = kBitModelTotal >> 1;
-
     buffer = buf3;
     bufferLim = buffer + *size3;
     if (range == 0xFFFFFFFF)
     {
-        RC_INIT2
+        RC_INIT2;
     }
     if (outSize == 0)
         return SZ_OK;
-    FILE * log = fopen("debug.log", "ab");
     for (;;)
     {
         SizeT limit = size0 - inPos;
@@ -190,20 +172,7 @@ int Bcj2_DecodeToFileWithBufs(
             prevByte = b;
             limit--;
         }
-// ---------------------------------------      
-        {
-            SizeT a = 0;
-            if (*size1 < 1000 )
-                a+=1;
-            else if (*size1 < 2500)
-                a+=1;
-            else if (*size1 < 3500)
-                a+=1;
-            else if (*size1 < 5000)
-                a+=1;
 
-        }
-// ---------------------------------------
         if (limit == 0 || outPos == outSize)
             break;
 
@@ -215,13 +184,7 @@ int Bcj2_DecodeToFileWithBufs(
             prob = p + 256;
         else
             prob = p + 257;
-        if ((st->out_for_now + outPos) > 537474 && (st->out_for_now + outPos) < 636704)
-        {
-            fprintf(log, "#%ld  ttt: %ld, code: %ld, prob: %ld, range: %ld, bound: %ld\n", 
-                st->out_for_now + outPos, ttt, code, *prob, (UInt32)range, bound);
-            printf("\n#%ld  ttt: %ld, code: %ld, prob: %ld, range: %ld, bound: %ld", 
-                st->out_for_now + outPos, ttt, code, *prob, range, bound );
-        }
+
         IF_BIT_0(prob)
         {
             UPDATE_0(prob)
