@@ -188,7 +188,14 @@ static wchar_t * BaseName(wchar_t *path)
     }
     return path;
 }
-
+//static wchar_t * TempName(wchar_t *baseName)
+//{
+//    wchar_t *tempName = (wchar_t *) new wchar_t(255);
+//
+//    wcscpy(tempName, L"tempDir/");
+//    wcscat(tempName, baseName);
+//    return tempName;
+//}
 SizeT CountBytesToWrite(const UInt32 folderIndex, const CSzArEx *db, size_t buf_size, pwr_st_t st)
 {
     const SizeT startOffset = st->bytesWritten;
@@ -242,7 +249,7 @@ SRes WriteStream(const UInt32 folderIndex, const CSzArEx *db, Byte *buf, size_t 
             if (i == st->fileToWriteIndex)
             {
                 fileName = (wchar_t *)db->FileNames.data + db->FileNameOffsets[i];
-                fileName = BaseName(fileName);
+                //fileName = BaseName(fileName);
                 break;
             }
         }

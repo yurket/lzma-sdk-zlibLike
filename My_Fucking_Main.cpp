@@ -1,11 +1,61 @@
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include "7z.h"
 #include "7zAlloc.h"
 #include "7zCrc.h"
 #include "7zFile.h"
 #include "7zVersion.h"
+
+static int TestSignatureCandidate(Byte *testBytes)
+{
+    size_t i;
+    for (i = 0; i < k7zSignatureSize; i++)
+        if (testBytes[i] != k7zSignature[i])
+            return 0;
+    return 1;
+}
+#define BUF_SIZE (1 << 20)
+
+static char *LetsFind7z(char *fileName)
+{
+    FILE *fin = fopen(fileName, "rb");
+    FILE *fout = fopen("7zpart.7z", "wb");
+    Byte buf[k7zSignatureSize];
+    Byte *write_buf = (Byte *) new Byte[BUF_SIZE];
+    if (!fin && !fout)
+    {
+        printf("Can't open file %s\n", (!fin) ? fileName: "7zpart.7z");
+        return NULL;
+    }
+
+    while (true)
+    {
+        fread(buf, sizeof(Byte), k7zSignatureSize, fin);
+        if (TestSignatureCandidate(buf))
+        {
+            fseek(fin, -((int)k7zSignatureSize), SEEK_CUR);
+            break;
+        }
+        fseek(fin, -((int)k7zSignatureSize) + 1, SEEK_CUR);
+    }
+    UInt64 bytes_to_write = BUF_SIZE, read;
+    while(true)
+    {
+        read = fread(write_buf, sizeof(Byte), BUF_SIZE, fin);
+        if (read == 0)
+            break;
+        if (read != BUF_SIZE)
+            bytes_to_write = read;
+        fwrite(write_buf, sizeof(Byte), bytes_to_write, fout);
+    }
+    fclose(fin);
+    fclose(fout);
+    delete [] write_buf;
+    write_buf = NULL;
+    return "7zpart.7z";
+}
 
 int main(int argc, char *argv[])
 {
@@ -31,18 +81,18 @@ int main(int argc, char *argv[])
         printf("to much args!\n");
         return 1;
     }
-
-    if (InFile_Open(&archiveStream.file, FileName))
+    char *SzFileName = LetsFind7z(FileName);
+    if (InFile_Open(&archiveStream.file, SzFileName))
     {
-        printf("can not open input file\n");
+        printf("can not open input file %s\n", SzFileName);
         return 1;
     }
-
     FileInStream_CreateVTable(&archiveStream);
     LookToRead_CreateVTable(&lookStream, False);
 
     lookStream.realStream = &archiveStream.s;
     LookToRead_Init(&lookStream);
+    
 
     CrcGenerateTable();
 
@@ -72,18 +122,8 @@ int main(int argc, char *argv[])
         unsigned int outSizeProcessed = 0;
         unsigned long bytesWritten = 0;
 
-        //res = SzArEx_Extract(&db, &lookStream.s, 0,&blockIndex, &outBuffer, &outBufferSize, \
-        //     &offset, &outSizeProcessed, &allocImp, &allocTempImp);
         res = ExtractAllFiles(&db, &lookStream.s, &allocImp, &allocTempImp);
-        //res == SZ_OK ? printf("extr ok\n") : printf("extr not ok\n");
-        //if (outSizeProcessed != outBufferSize)
-        //    printf("[!] buf size %d bytes, while processed %d bytes!", outBufferSize, outSizeProcessed);
 
-        //hOutFile = CreateFileW((LPCWSTR)db.FileNames.data, GENERIC_WRITE, 0, NULL, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL);
-        //WriteFile(hOutFile, outBuffer, outBufferSize, &bytesWritten, NULL);
-        //if (bytesWritten != outBufferSize)
-        //    printf("[!] buf size %d bytes, while written %d bytes!", outBufferSize, bytesWritten);
-        //CloseHandle(hOutFile);
     }
     system("pause");
     return 0;
