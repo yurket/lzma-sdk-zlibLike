@@ -421,8 +421,6 @@ static SRes SzDecodeLzmaToFileWithBuf(const UInt32 folderIndex, CSzCoderInfo *co
                 WriteTempStream(myOutBufBitch, out_buf_size, StopDecoding, &st);
             else
                 WriteStream(folderIndex, db, myOutBufBitch, out_buf_size, &st);
-        
-        //    RINOK(File_Write(&outFile, myOutBufBitch, &out_buf_size));
 
             if (bytes_left == 0)
             {
@@ -598,105 +596,6 @@ static SRes SzDecodeLzma2(CSzCoderInfo *coder, UInt64 inSize, ILookInStream *inS
   Lzma2Dec_FreeProbs(&state, allocMain);
   return res;
 }
-
-static SRes SzDecodeLzma2ToFile(CSzCoderInfo *coder, const CSzArEx *db, ILookInStream *inStream, SizeT outSize, ISzAlloc *allocMain)
-{
-    CLzma2Dec state;
-    SRes res = SZ_OK;
-    Byte *myOwnBufBitch = NULL;
-    size_t myOwnBufSize = 0;
-    UInt64 _outSizeProcessed = 0, _inSizeProcessed = 0;
-    UInt64 _inPos = 0;
-    size_t _inSize = 0;
-    size_t writtenBytes = 0;
-
-    Lzma2Dec_Construct(&state);
-    if (coder->Props.size != 1)
-        return SZ_ERROR_DATA;
-    RINOK(Lzma2Dec_AllocateProbs(&state, coder->Props.data[0], allocMain));
-    Lzma2Dec_Init(&state);
-
-    if (myOwnBufBitch == NULL)
-    {
-        myOwnBufSize = state.decoder.prop.dicSize;
-        myOwnBufBitch = (Byte *)IAlloc_Alloc(allocMain, myOwnBufSize);
-        if (myOwnBufBitch == NULL)
-            return SZ_ERROR_MEM;
-        state.decoder.dic = myOwnBufBitch;
-        state.decoder.dicBufSize = myOwnBufSize;
-    }
-
-    for (;;)
-    {
-        Byte *inBuf = NULL;
-
-        if (_inPos == _inSize)
-        {
-            _inPos = _inSize = 0;
-            //RINOK(inStream->Read(_inBuf, kInBufSize, &_inSize));      // _inSize = 1 048 576
-            _inSize = LookToRead_BUF_SIZE;
-            RINOK(inStream->Look((void *)inStream, (const void **)&inBuf, &_inSize));
-        }
-
-        SizeT dicPos = state.decoder.dicPos;
-        SizeT curSize = state.decoder.dicBufSize - dicPos;     // dicBufSize = 6 291 456
-        const UInt32 kStepSize = ((UInt32)1 << 22);
-        if (curSize > kStepSize)
-            curSize = (SizeT)kStepSize;
-        
-        ELzmaFinishMode finishMode = LZMA_FINISH_ANY;
-        const UInt64 rem = outSize - _outSizeProcessed;      // _outSize = 6 086 757 (UnpackedSize)
-        if (rem < curSize)
-        {
-            curSize = (SizeT)rem;
-            /*
-            // finishMode = LZMA_FINISH_END;
-            we can't use LZMA_FINISH_END here to allow partial decoding
-            */
-        }
-
-        SizeT inSizeProcessed = _inSize - _inPos;
-        ELzmaStatus status;
-        res = Lzma2Dec_DecodeToDic(&state, dicPos + curSize, inBuf, &inSizeProcessed, finishMode, &status);
-        if (res != SZ_OK)
-            break;
-
-        _inPos += (UInt32)inSizeProcessed;
-        _inSizeProcessed += inSizeProcessed;
-        SizeT outSizeProcessed = state.decoder.dicPos - dicPos;
-        _outSizeProcessed += outSizeProcessed;
-
-        bool finished = (inSizeProcessed == 0 && outSizeProcessed == 0);
-        bool stopDecoding = (_outSizeProcessed >= outSize);
-
-        if (res != 0 || state.decoder.dicPos == state.decoder.dicBufSize || finished || stopDecoding)
-        {
-
-            //HRESULT res2 = WriteStream(db, state.decoder.dic, state.decoder.dicPos, &writtenBytes);       // made new func
-            //if (res != 0)
-            //    return S_FALSE;
-            //RINOK(res2);
-            //if (stopDecoding)
-            //    return S_OK;
-            //if (finished)
-            //    return (status == LZMA_STATUS_FINISHED_WITH_MARK ? S_OK : S_FALSE);
-        }
-        if (state.decoder.dicPos == state.decoder.dicBufSize)
-        {
-            state.decoder.dicPos = 0;
-            state.decoder.dic = myOwnBufBitch;
-        }
-
-        res = inStream->Skip((void *)inStream, inSizeProcessed);
-        if (res != SZ_OK)
-            break;
-    }
-
-    IAlloc_Free(allocMain, myOwnBufBitch);
-    Lzma2Dec_FreeProbs(&state, allocMain);
-    return res;
-}
-
 
 static SRes SzDecodeCopy(UInt64 inSize, ILookInStream *inStream, Byte *outBuffer)
 {
@@ -986,7 +885,8 @@ static SRes SzFolder_Decode2ToFile(const CSzFolder *folder, const UInt32 folderI
             Byte *outBufCur = NULL;
             
             SizeT outSizeCur = outSize;
-            bool unpackInMem = false;                               // for small buffers within unpacking BCJ2
+            bool unpackInMem = false;                               // for small buffers within unpacking BCJ2 we can use 
+                                                                    // unpacking in memory
             if (folder->NumCoders == 4)
             {
                 UInt32 indices[] = { 3, 2, 0 };
@@ -1099,10 +999,8 @@ static SRes SzFolder_Decode2ToFile(const CSzFolder *folder, const UInt32 folderI
 
                 while (total_out_size)
                 {
-                    SizeT myInBusSize = IN_BUF_SIZE, myOutBufSize = OUT_BUF_SIZE;
+                    SizeT myOutBufSize = OUT_BUF_SIZE;
                     SizeT processed = 0, bytes_read = IN_BUF_SIZE;
-                    //SizeT rem = total_out_size - out_size;
-                    //bytes_read = (rem < IN_BUF_SIZE) ? rem : IN_BUF_SIZE;
                     RINOK(ReadTempStream(myInBufBitch, &bytes_read, &r_st));
 
                     processed = Bcj2_DecodeToFileWithBufs(

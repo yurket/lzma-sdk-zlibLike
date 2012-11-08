@@ -113,18 +113,8 @@ int main(int argc, char *argv[])
     }
 
 
-    {
-        HANDLE hOutFile = NULL;
-        unsigned int blockIndex = -1;
-        unsigned char *outBuffer = (unsigned char *)0; 
-        unsigned int outBufferSize = 0;  
-        unsigned int offset = 0;
-        unsigned int outSizeProcessed = 0;
-        unsigned long bytesWritten = 0;
+    res = ExtractAllFiles(&db, &lookStream.s, &allocImp, &allocTempImp);
 
-        res = ExtractAllFiles(&db, &lookStream.s, &allocImp, &allocTempImp);
-
-    }
     system("pause");
     return 0;
 }
