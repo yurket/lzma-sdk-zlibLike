@@ -849,6 +849,45 @@ static bool DetectFilter(const CSzFolder *folder)
     else
         return 0;
 }
+static SRes ApplyBCJ(SizeT total_unpack_size, const UInt32 folderIndex, const CSzArEx *db, ISzAlloc *allocMain)
+{
+    Byte *decodeBuf = NULL;
+    SizeT myOutBufSize = OUT_BUF_SIZE + RETAIN_BUF_SIZE;
+    wr_st_t wr_st;
+    write_state_init(wr_st);
+    r_st_t r_st;
+    read_state_init(r_st);
+    BCJ_state bcj1_st;
+    BCJ_state_init(bcj1_st);
+    UInt64 _total_size = 0;
+    if (decodeBuf == NULL)
+        ALLOCATE_BUF(decodeBuf, myOutBufSize);
+
+    while (total_unpack_size)
+    {
+        SizeT processed = 0, bytes_read = OUT_BUF_SIZE;
+        SizeT retain_offset = 0;
+        bool LastBuf = false;
+        RINOK(ReadTempStream(decodeBuf + RETAIN_BUF_SIZE, &bytes_read, &r_st));
+        if (bytes_read < IN_BUF_SIZE)
+            LastBuf = true;
+        processed = DecodeBCJ(decodeBuf, &bytes_read, &bcj1_st, LastBuf);
+
+        if (processed == 0)
+            break;
+        if (bcj1_st.FirstBuffer)               // first out buffer should strart from offset RETAIN_BUF_SIZE
+        {
+            retain_offset = RETAIN_BUF_SIZE;
+            bcj1_st.FirstBuffer = false;
+        }
+        RINOK(WriteStream(folderIndex, db, decodeBuf + retain_offset, processed, &wr_st));
+        total_unpack_size -= processed;
+    }
+
+    FREE_BUF(decodeBuf);
+    BCJ_state_free(bcj1_st);
+
+}
 
 static SRes SzFolder_Decode2ToFile(const CSzFolder *folder, const UInt32 folderIndex, const UInt64 *packSizes,
                              ILookInStream *inStream, const CSzArEx *db, UInt64 startPos,
@@ -1012,57 +1051,7 @@ static SRes SzFolder_Decode2ToFile(const CSzFolder *folder, const UInt32 folderI
             printf("BCJ filter in coder # %d\n", ci+1);
             if (ci != 1)
                 return SZ_ERROR_UNSUPPORTED;
-            {
-                Byte *decodeBuf = NULL;
-                SizeT myOutBufSize = OUT_BUF_SIZE + RETAIN_BUF_SIZE;
-                wr_st_t wr_st;
-                write_state_init(wr_st);
-                r_st_t r_st;
-                read_state_init(r_st);
-                BCJ_state bcj1_st;
-                BCJ_state_init(bcj1_st);
-                UInt64 _total_size = 0;
-                if (decodeBuf == NULL)
-                    ALLOCATE_BUF(decodeBuf, myOutBufSize);
-
-                while (total_out_size)
-                {
-                    SizeT processed = 0, bytes_read = OUT_BUF_SIZE;
-                    SizeT retain_offset = 0;
-                    bool LastBuf = false;
-                    RINOK(ReadTempStream(decodeBuf + RETAIN_BUF_SIZE, &bytes_read, &r_st));
-                    if (bytes_read < IN_BUF_SIZE)
-                        LastBuf = true;
-                    processed = DecodeBCJ(decodeBuf, &bytes_read, &bcj1_st, LastBuf);
-
-                    if (processed == 0)
-                        break;
-                    if (bcj1_st.FirstBuffer)               // first out buffer should strart from offset RETAIN_BUF_SIZE
-                    {
-                        retain_offset = RETAIN_BUF_SIZE;
-                        bcj1_st.FirstBuffer = false;
-                    }
-                    RINOK(WriteStream(folderIndex, db, decodeBuf + retain_offset, processed, &wr_st));
-                    total_out_size -= processed;
-                }
-
-                FREE_BUF(decodeBuf);
-                BCJ_state_free(bcj1_st);
-            }
-
-//             switch(coder->MethodID)
-//             {
-//             case k_BCJ:
-//                 {
-//                     UInt32 state;
-//                     x86_Convert_Init(state);
-//                     x86_Convert(outBuffer, outSize, 0, &state, 0);
-//                     break;
-//                 }
-//                 CASE_BRA_CONV(ARM)
-//             default:
-//                 return SZ_ERROR_UNSUPPORTED;
-//             }
+            ApplyBCJ(outSize, folderIndex, db, allocMain);
         }
     }
     return SZ_OK;
