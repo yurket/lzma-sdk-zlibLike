@@ -276,8 +276,8 @@ static SRes SzDecodeLzmaToFileWithBuf(const UInt32 folderIndex, CSzCoderInfo *co
         ELzmaFinishMode finishMode = LZMA_FINISH_ANY;
         ELzmaStatus status;
         
-        if (to_read)                            // if more than 1 folder in db, it can be read part of next folder stream ->
-        {                                       // it's not a problem, because before unpacking new db folder it seeks to right position
+        if (to_read)                            // if more than 1 folder in db, a part of the next folder stream can be read ->
+        {                                       // it's not a problem, because before unpacking new db folder it first seeks to right position
             bytes_read = IN_BUF_SIZE;   
             RINOK(inStream->Read(inStream, myInBufBitch, &bytes_read));
             in_buf_size = bytes_left = bytes_read;
@@ -308,8 +308,6 @@ static SRes SzDecodeLzmaToFileWithBuf(const UInt32 folderIndex, CSzCoderInfo *co
         StopDecoding = (out_size >= outSize)? true : false;
         if (bytes_left == 0 || out_buf_size == OUT_BUF_SIZE || StopDecoding)   // whole in_buf was decompressed
         {
-            bool last_time = StopDecoding ? true : false;
-            /*ApplyFilter(myOutBufBitch, &out_buf_size, FILTER_TYPE, &bcj_st, last_time);*/
             if (filterPresent)
                 WriteTempStream(IFile, myOutBufBitch, out_buf_size, StopDecoding, &st);
             else
@@ -393,8 +391,6 @@ static SRes SzDecodeLzma2ToFileWithBuf(const UInt32 folderIndex, CSzCoderInfo *c
         StopDecoding = (out_size >= outSize)? true : false;
         if (bytes_left == 0 || out_buf_size == OUT_BUF_SIZE || StopDecoding)   // whole in_buf was decompressed
         {
-            bool last_time = StopDecoding ? true : false;
-            /*ApplyFilter(myOutBufBitch, &out_buf_size, FILTER_TYPE, &bcj_st, last_time);*/
             if (filterPresent)
                 WriteTempStream(IFile, myOutBufBitch, out_buf_size, StopDecoding, &st);
             else
@@ -791,6 +787,47 @@ static SRes ApplyBCJ(IFileStream  *IFile, SizeT total_unpack_size, const UInt32 
     return SZ_OK;
 }
 
+
+static SRes ApplyBCJ2(IFileStream  *IFile, SizeT total_out_size, const UInt32 folderIndex, 
+                      const CSzArEx *db, ISzAlloc *allocMain, Byte *tempBuf[], SizeT tempSizes[])
+{
+    Byte *myInBufBitch = NULL, *myOutBufBitch = NULL;
+    Byte bcj2PrevByte = 0;
+    wr_st_t wr_st;
+    write_state_init(wr_st);
+    r_st_t r_st;
+    read_state_init(r_st);
+    Bcj2_dec_state bcj2_st;
+    Bcj2_dec_state_init(bcj2_st);
+    bcj2_st.buf1 = tempBuf[0];
+    bcj2_st.buf2 = tempBuf[1];
+    bcj2_st.buf3 = tempBuf[2];
+    UInt64 _total_size = 0;
+    if (myInBufBitch == NULL)
+        ALLOCATE_BUFS(myInBufBitch, IN_BUF_SIZE, myOutBufBitch, OUT_BUF_SIZE);
+
+    while (total_out_size)
+    {
+        SizeT myOutBufSize = OUT_BUF_SIZE;
+        SizeT processed = 0, bytes_read = IN_BUF_SIZE;
+        RINOK(ReadTempStream(IFile, myInBufBitch, &bytes_read, &r_st));
+
+        processed = Bcj2_DecodeToFileWithBufs(
+            myInBufBitch, bytes_read,
+            bcj2_st.buf1, &tempSizes[0],
+            bcj2_st.buf2, &tempSizes[1],
+            bcj2_st.buf3, &tempSizes[2],
+            myOutBufBitch, myOutBufSize,
+            &bcj2_st);
+        if (processed == 0)
+            break;
+        RINOK(WriteStream(IFile, folderIndex, db, myOutBufBitch, processed, &wr_st));
+        total_out_size -= processed;
+    }
+
+    FREE_BUFS(myInBufBitch, myOutBufBitch);
+    
+}
 static SRes SzFolder_Decode2ToFile(const CSzFolder *folder, const UInt32 folderIndex, const UInt64 *packSizes,
                              ILookInStream *inStream, IFileStream  *IFile, const CSzArEx *db, UInt64 startPos,
                              SizeT outSize, ISzAlloc *allocMain, Byte *tempBuf[])
@@ -909,43 +946,7 @@ static SRes SzFolder_Decode2ToFile(const CSzFolder *folder, const UInt32 folderI
                 return SZ_ERROR_MEM;
             res = SzDecodeCopy(s3Size, inStream, tempBuf[2]);
             RINOK(res)
-            {
-                Byte *myInBufBitch = NULL, *myOutBufBitch = NULL;
-                Byte bcj2PrevByte = 0;
-                wr_st_t wr_st;
-                write_state_init(wr_st);
-                r_st_t r_st;
-                read_state_init(r_st);
-                Bcj2_dec_state bcj2_st;
-                Bcj2_dec_state_init(bcj2_st);
-                bcj2_st.buf1 = tempBuf[0];
-                bcj2_st.buf2 = tempBuf[1];
-                bcj2_st.buf3 = tempBuf[2];
-                UInt64 _total_size = 0;
-                if (myInBufBitch == NULL)
-                    ALLOCATE_BUFS(myInBufBitch, IN_BUF_SIZE, myOutBufBitch, OUT_BUF_SIZE);
-
-                while (total_out_size)
-                {
-                    SizeT myOutBufSize = OUT_BUF_SIZE;
-                    SizeT processed = 0, bytes_read = IN_BUF_SIZE;
-                    RINOK(ReadTempStream(IFile, myInBufBitch, &bytes_read, &r_st));
-
-                    processed = Bcj2_DecodeToFileWithBufs(
-                        myInBufBitch, bytes_read,
-                        bcj2_st.buf1, &tempSizes[0],
-                        bcj2_st.buf2, &tempSizes[1],
-                        bcj2_st.buf3, &tempSizes[2],
-                        myOutBufBitch, myOutBufSize,
-                        &bcj2_st);
-                    if (processed == 0)
-                        break;
-                    RINOK(WriteStream(IFile, folderIndex, db, myOutBufBitch, processed, &wr_st));
-                    total_out_size -= processed;
-                }
-
-                FREE_BUFS(myInBufBitch, myOutBufBitch);
-            }
+            res = ApplyBCJ2(IFile, outSizeCur, folderIndex, db, allocMain, tempBuf, tempSizes);
             RINOK(res)
         }
         else    // BCJ
