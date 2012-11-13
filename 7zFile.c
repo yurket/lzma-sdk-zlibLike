@@ -282,3 +282,43 @@ void FileOutStream_CreateVTable(CFileOutStream *p)
 {
   p->s.Write = FileOutStream_Write;
 }
+
+
+/* ------------ IFileStream ------------ */
+static WRes IFileStream_OpenWrite(void *pp, const WCHAR *name)
+{
+    CSzFile *p = (CSzFile *)pp;
+    return OutFile_OpenW(p, name);
+}
+
+static WRes IFileStream_OpenRead(void *pp, const WCHAR *name)
+{
+    CSzFile *p = (CSzFile *)pp;
+    return InFile_OpenW(p, name);
+}
+
+static size_t IFileStream_Write(void *pp, const void *data, size_t size)
+{
+    CSzFile *p = (CSzFile *)pp;
+    File_Write(p, data, &size);
+    return size;
+}
+static SRes IFileStream_Read(void *pp, void *data, size_t *size)
+{
+    CSzFile *p = (CSzFile *)pp;
+    return (File_Read(p, data, size) == 0) ? SZ_OK : SZ_ERROR_READ;
+}
+static void IFileStream_CloseFile(void *pp)
+{
+    CSzFile *p = (CSzFile *) pp;
+    File_Close(p);
+}
+
+void IFileStream_CreateVTable(IFileStream *p)
+{
+    p->OpenInFile = IFileStream_OpenRead;
+    p->OpenOutFile = IFileStream_OpenWrite;
+    p->FileRead = IFileStream_Read;
+    p->FileWrite = IFileStream_Write;
+    p->FileClose = IFileStream_CloseFile;
+}

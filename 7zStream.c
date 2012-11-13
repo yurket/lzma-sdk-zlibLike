@@ -230,7 +230,7 @@ SizeT CountBytesToWrite(const UInt32 folderIndex, const CSzArEx *db, size_t buf_
     return 0;
 }
 
-SRes WriteStream(const UInt32 folderIndex, const CSzArEx *db, Byte *buf, size_t buf_size, pwr_st_t st)
+SRes WriteStream(IFileStream  *IFile, const UInt32 folderIndex, const CSzArEx *db, Byte *buf, size_t buf_size, pwr_st_t st)
 {
     SRes res = SZ_OK;
     SizeT offset = 0;
@@ -263,72 +263,24 @@ SRes WriteStream(const UInt32 folderIndex, const CSzArEx *db, Byte *buf, size_t 
         while(bytesToWrite)
         {
             size_t bytesWritten = bytesToWrite;
-            F_WRITE(&st->out_file, buf + offset, &bytesWritten);
+            F_WRITE(&st->out_file, buf + offset, bytesWritten);
             bytesToWrite -= bytesWritten;
             buf_size -= bytesWritten;
             offset += bytesWritten;
             st->bytesWritten += bytesWritten;
         }
-
         if (!st->FitsToOneFile)
         {
             File_Close(&st->out_file);
             st->fileOpened = false;
         }
-
     }
-
-    //for (UInt32 i = 0; i < db->db.NumFiles; i++)
-    //{
-    //    if (db->db.Files[i].IsDir)
-    //        continue;
-    //    wchar_t *fileName = NULL;
-    //    CSzFile outFile;
-    //    size_t fileUnpackedSize = 0;
-    //    size_t bytesToWrite = 0;
-
-    //    fileName = (wchar_t *)db->FileNames.data + db->FileNameOffsets[i];
-    //    fileName = BaseName(fileName);
-    //    fileUnpackedSize = (size_t)db->db.Files[i].Size;
-    //    wprintf(L"file %d: %s\n", i+1, fileName);
-    //    
-    //    if (size < fileUnpackedSize)
-    //        bytesToWrite = size;
-    //    else
-    //        bytesToWrite = fileUnpackedSize;
-    //    if (OutFile_OpenW(&outFile, fileName))
-    //    {
-    //        wprintf(L"can not open output file \"%s\"\n", fileName);
-    //        res = SZ_ERROR_FAIL;
-    //        continue;
-    //    }
-        //while(bytesToWrite)
-        //{
-        //    size_t bytesWritten = bytesToWrite;
-        //    if (File_Write(&outFile, buf + offset, &bytesWritten) != 0 )
-        //    {
-        //        wprintf(L"can not write to output file");
-        //        res = SZ_ERROR_FAIL;
-        //        continue;
-        //    }
-        //    bytesToWrite -= bytesWritten;
-        //    offset += bytesWritten;
-        //    *writtenSize += bytesWritten;
-        //}
- 
-        //if (*writtenSize == fileUnpackedSize)
-        //{
-        //    *writtenSize = 0;
-        //    File_Close(&outFile);
-        //}
-    //    
-    //}
 
     return res;
 }
 
 
-SRes WriteTempStream(Byte *buf, size_t buf_size, bool StopWriting, pwr_st_t st)
+SRes WriteTempStream(IFileStream  *IFile, Byte *buf, size_t buf_size, bool StopWriting, pwr_st_t st)
 {
     SRes res = SZ_OK;
     wchar_t *fileName = L"temp.dat";
@@ -345,7 +297,7 @@ SRes WriteTempStream(Byte *buf, size_t buf_size, bool StopWriting, pwr_st_t st)
     while (buf_size)
     {
         SizeT bytes_to_write = buf_size;
-        F_WRITE(&st->out_file, buf, &bytes_to_write);
+        F_WRITE(&st->out_file, buf, bytes_to_write);
         buf_size -= bytes_to_write;
     }
 
@@ -357,7 +309,7 @@ SRes WriteTempStream(Byte *buf, size_t buf_size, bool StopWriting, pwr_st_t st)
 
     return res;
 }
-SRes ReadTempStream(Byte *buf, size_t *buf_size, pr_st_t st)
+SRes ReadTempStream(IFileStream  *IFile, Byte *buf, size_t *buf_size, pr_st_t st)
 {
     SRes res = SZ_OK;
     wchar_t *fileName = L"temp.dat";

@@ -1370,9 +1370,9 @@ SRes SzArEx_Extract(
       }
       if (res == SZ_OK)
       {
-        res = SzFolder_DecodeToFile(folder, folderIndex,            // should not be folderIndex parametr! -> fix it!
+        res = SzFolder_Decode(folder,
           p->db.PackSizes + p->FolderStartPackStreamIndex[folderIndex],
-          inStream, p, startOffset, unpackSize, allocTemp);
+          inStream, startOffset, *outBuffer, unpackSize, allocTemp);
         if (res == SZ_OK)
         {
           if (folder->UnpackCRCDefined)
@@ -1402,7 +1402,7 @@ SRes SzArEx_Extract(
 
 
 // ======================================================================================================================
-SRes ExtractAllFiles( const CSzArEx *p, ILookInStream *inStream, ISzAlloc *allocMain, ISzAlloc *allocTemp)
+SRes ExtractAllFiles( const CSzArEx *p, ILookInStream *inStream, IFileStream  *IFile, ISzAlloc *allocMain, ISzAlloc *allocTemp)
 {
     //*offset = 0;
     //*outSizeProcessed = 0;
@@ -1432,7 +1432,7 @@ SRes ExtractAllFiles( const CSzArEx *p, ILookInStream *inStream, ISzAlloc *alloc
 
         res = SzFolder_DecodeToFile(folder, folderIndex,
             p->db.PackSizes + p->FolderStartPackStreamIndex[folderIndex],       // FolderStartPackStreamIndex - щито о_О?
-            inStream, p, startOffset, unpackSize, allocTemp);
+            inStream, IFile, p, startOffset, unpackSize, allocTemp);
     }
 
 

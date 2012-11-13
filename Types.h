@@ -153,6 +153,16 @@ typedef struct
        (result < size) means error */
 } ISeqOutStream;
 
+/*    interface to deal with files    */
+typedef struct {
+    WRes (*OpenOutFile)(void *p, const WCHAR *name);
+    WRes (*OpenInFile)(void *p, const WCHAR *name);
+    size_t (*FileWrite)(void *p, const void *buf, size_t size);
+    SRes (*FileRead)(void *p, void *buf, size_t *size);
+    void (*FileClose)(void *p);
+} IFileStream;
+
+void IFileStream_CreateVTable(IFileStream *p);
 typedef enum
 {
   SZ_SEEK_SET = 0,

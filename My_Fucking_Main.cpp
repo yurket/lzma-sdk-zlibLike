@@ -62,6 +62,7 @@ int main(int argc, char *argv[])
     char *FileName = NULL;
     CLookToRead lookStream;
     CFileInStream archiveStream;
+    IFileStream IFile;
     CSzArEx db;              /* 7z archive database structure */
     ISzAlloc allocImp;       /* memory functions for main pool */
     ISzAlloc allocTempImp;
@@ -93,7 +94,7 @@ int main(int argc, char *argv[])
     lookStream.realStream = &archiveStream.s;
     LookToRead_Init(&lookStream);
     
-
+    IFileStream_CreateVTable(&IFile);
     CrcGenerateTable();
 
     SzArEx_Init(&db);
@@ -113,7 +114,7 @@ int main(int argc, char *argv[])
     }
 
 
-    res = ExtractAllFiles(&db, &lookStream.s, &allocImp, &allocTempImp);
+    res = ExtractAllFiles(&db, &lookStream.s, &IFile, &allocImp, &allocTempImp);
 
     system("pause");
     return 0;

@@ -35,35 +35,37 @@ typedef struct read_state
                                st.fileOpened = false;       \
                             };                              \
 
-#define OPEN_FILE_OUT(File, fileName)           if (OutFile_OpenW(File, fileName))                              \
+#define OPEN_FILE_OUT(File, fileName)           if (IFile->OpenOutFile(File, fileName))                              \
                                                 {                                                               \
                                                     wprintf(L"can not open output file \"%s\"\n", fileName);    \
                                                     res = SZ_ERROR_FAIL;                                        \
                                                     return res;                                                   \
                                                 }        
 
-#define OPEN_FILE_IN(File, fileName)           if (InFile_OpenW(File, fileName))                              \
+#define OPEN_FILE_IN(File, fileName)           if (IFile->OpenInFile(File, fileName))                              \
                                                {                                                               \
-                                                   wprintf(L"can not open output file \"%s\"\n", fileName);    \
+                                                   wprintf(L"can not open input file \"%s\"\n", fileName);    \
                                                    res = SZ_ERROR_FAIL;                                        \
                                                    return res;                                                   \
-                                               }  \
+                                               }
 
-#define F_WRITE(outFile, buf, size)             if (File_Write(outFile, buf, size))                     \
-                                                {                                                       \
-                                                    wprintf(L"can not write to output file");           \
-                                                    res = SZ_ERROR_FAIL;                                \
-                                                    return res;                                           \
-                                                }                                                       \
+#define F_WRITE(outFile, buf, size)             {                                                       \
+                                                    SizeT written = IFile->FileWrite(outFile, buf, size); \
+                                                    if (written != size) {                              \
+                                                        wprintf(L"error: not all data written! %d bytes", written);           \
+                                                        res = SZ_ERROR_WRITE;                                \
+                                                        return res;                                           \
+                                                    }                                                   \
+                                                    size = written;                                     \
+                                                }
 
 #define F_READ(inFile, buf, size)               if (File_Read(inFile, buf, size))                       \
                                                 {                                                       \
                                                     wprintf(L"can not read file");                      \
-                                                    res = SZ_ERROR_FAIL;                                \
-                                                }                                                       \
+                                                    res = SZ_ERROR_READ;                                \
+                                                }
 
 
-SRes WriteStream(const UInt32 folderIndex, const CSzArEx *db, Byte *buf, size_t size, pwr_st_t st);
-SRes WriteTempStream(Byte *buf, size_t buf_size, bool StopWriting, pwr_st_t st);
-SRes ReadStream(const UInt32 folderIndex, const CSzArEx *db, Byte *buf, size_t *size, pr_st_t st);
-SRes ReadTempStream(Byte *buf, size_t *buf_size, pr_st_t st);
+SRes WriteStream(IFileStream  *IFile, const UInt32 folderIndex, const CSzArEx *db, Byte *buf, size_t size, pwr_st_t st);
+SRes WriteTempStream(IFileStream  *IFile, Byte *buf, size_t buf_size, bool StopWriting, pwr_st_t st);
+SRes ReadTempStream(IFileStream  *IFile, Byte *buf, size_t *buf_size, pr_st_t st);
