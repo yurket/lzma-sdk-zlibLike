@@ -271,7 +271,7 @@ SRes WriteStream(IFileStream  *IFile, const UInt32 folderIndex, const CSzArEx *d
         }
         if (!st->FitsToOneFile)
         {
-            File_Close(&st->out_file);
+            IFile->FileClose(&st->out_file);
             st->fileOpened = false;
         }
     }
@@ -303,7 +303,7 @@ SRes WriteTempStream(IFileStream  *IFile, Byte *buf, size_t buf_size, bool StopW
 
     if (StopWriting)
     {
-        File_Close(&st->out_file);
+        IFile->FileClose(&st->out_file);
         st->fileOpened = false;
     }
 
@@ -329,7 +329,7 @@ SRes ReadTempStream(IFileStream  *IFile, Byte *buf, size_t *buf_size, pr_st_t st
 
     if (bytes_to_read < *buf_size || res )
     {
-        File_Close(&st->in_file);
+        IFile->FileClose(&st->in_file);
         st->fileOpened = false;
     }
     return res;
