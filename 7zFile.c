@@ -2,7 +2,6 @@
 2009-11-24 : Igor Pavlov : Public domain */
 
 #include "7zFile.h"
-
 #ifndef USE_WINDOWS_FILE
 
 #ifndef UNDER_CE
@@ -314,6 +313,29 @@ static void IFileStream_CloseFile(void *pp)
     File_Close(p);
 }
 
+static SRes FileDelete(const void *name)
+{
+    if (name == NULL)
+        return SZ_ERROR_FAIL;
+#ifdef _WIN32
+    LPCWSTR fileName = (LPCWSTR)name;
+    if (DeleteFileW(fileName) == 0)
+        return GetLastError();
+    else 
+        return SZ_OK;
+#else
+    char *fileName = (char *)name;
+    if( remove(fileName) != 0 )
+        perror( "Error deleting file" );
+    else
+        return SZ_OK;
+#endif
+}
+
+static void IFileStream_DeleteFile(void *pp)
+{
+    FileDelete(pp);
+}
 void IFileStream_CreateVTable(IFileStream *p)
 {
     p->OpenInFile = IFileStream_OpenRead;
@@ -321,4 +343,5 @@ void IFileStream_CreateVTable(IFileStream *p)
     p->FileRead = IFileStream_Read;
     p->FileWrite = IFileStream_Write;
     p->FileClose = IFileStream_CloseFile;
+    p->FileRemove = IFileStream_DeleteFile;
 }

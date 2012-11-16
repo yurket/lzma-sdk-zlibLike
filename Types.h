@@ -160,6 +160,7 @@ typedef struct {
     size_t (*FileWrite)(void *p, const void *buf, size_t size);
     SRes (*FileRead)(void *p, void *buf, size_t *size);
     void (*FileClose)(void *p);
+    void (*FileRemove) (void *p);
 } IFileStream;
 
 void IFileStream_CreateVTable(IFileStream *p);

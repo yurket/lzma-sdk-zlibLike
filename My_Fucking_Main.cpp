@@ -57,6 +57,12 @@ static char *LetsFind7z(char *fileName)
     return "7zpart.7z";
 }
 
+static void Cleanup(IFileStream *IFile)
+{
+    IFile->FileRemove(L"temp.dat");
+    IFile->FileRemove(L"7zpart.7z");
+}
+
 int main(int argc, char *argv[])
 {
     char *FileName = NULL;
@@ -115,7 +121,8 @@ int main(int argc, char *argv[])
 
 
     res = ExtractAllFiles(&db, &lookStream.s, &IFile, &allocImp, &allocTempImp);
-
+    File_Close(&archiveStream.file);
+    Cleanup(&IFile);
     system("pause");
     return 0;
 }

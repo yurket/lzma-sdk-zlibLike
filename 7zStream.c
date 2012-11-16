@@ -325,12 +325,12 @@ SRes ReadTempStream(IFileStream  *IFile, Byte *buf, size_t *buf_size, pr_st_t st
 
     SizeT bytes_to_read = *buf_size;
     F_READ(&st->in_file, buf, &bytes_to_read);
-    *buf_size = bytes_to_read;
 
     if (bytes_to_read < *buf_size || res )
     {
         IFile->FileClose(&st->in_file);
         st->fileOpened = false;
     }
+    *buf_size = bytes_to_read;
     return res;
 }

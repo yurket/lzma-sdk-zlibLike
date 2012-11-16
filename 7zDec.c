@@ -946,7 +946,7 @@ static SRes SzFolder_Decode2ToFile(const CSzFolder *folder, const UInt32 folderI
                 return SZ_ERROR_MEM;
             res = SzDecodeCopy(s3Size, inStream, tempBuf[2]);
             RINOK(res)
-            res = ApplyBCJ2(IFile, outSizeCur, folderIndex, db, allocMain, tempBuf, tempSizes);
+            res = ApplyBCJ2(IFile, total_out_size, folderIndex, db, allocMain, tempBuf, tempSizes);
             RINOK(res)
         }
         else    // BCJ
