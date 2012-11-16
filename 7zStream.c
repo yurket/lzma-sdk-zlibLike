@@ -223,7 +223,8 @@ SizeT CountBytesToWrite(const UInt32 folderIndex, const CSzArEx *db, SizeT buf_s
             else                                                                // need to split writing into several files
             {
                 st->FitsToOneFile = false;
-                return (SizeT)(filesOffsetSums - startOffset);
+                bytesToWriteInCurFile = (SizeT)(filesOffsetSums - startOffset);
+                return bytesToWriteInCurFile;
             }
         }
     }
@@ -244,15 +245,12 @@ SRes WriteStream(IFileStream  *IFile, const UInt32 folderIndex, const CSzArEx *d
         wchar_t *fileName = NULL;
         SizeT bytesToWrite = CountBytesToWrite(folderIndex, db, buf_size, st);
         for (UInt32 i = 0; i < db->db.NumFiles; i++)
-        {
-            CSzFileItem &curFile = db->db.Files[i];
             if (i == st->fileToWriteIndex)
             {
                 fileName = (wchar_t *)db->FileNames.data + db->FileNameOffsets[i];
                 //fileName = BaseName(fileName);
                 break;
             }
-        }
 
         if (!st->fileOpened)
         {

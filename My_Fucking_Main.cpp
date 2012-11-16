@@ -73,7 +73,7 @@ int main(int argc, char *argv[])
     ISzAlloc allocImp;       /* memory functions for main pool */
     ISzAlloc allocTempImp;
     SRes res; 
-    unsigned int i = 0, j = 0;
+    unsigned int i = 0;
     size_t *pOffsets = NULL;
 
     allocImp.Alloc = SzAlloc;

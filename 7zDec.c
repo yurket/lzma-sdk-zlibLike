@@ -186,7 +186,7 @@ static SRes SzDecodeLzma(CSzCoderInfo *coder, UInt64 inSize, ILookInStream *inSt
 #define DECODING        0
 #define ENCODING        1
 
-#define ALLOCATE_BUF(buf, size)          if (size) {                                             \
+#define ALLOCATE_BUF(buf, size)          {                                                      \
                                              buf = (Byte *)IAlloc_Alloc(allocMain, size);        \
                                              if (buf == NULL)  return SZ_ERROR_MEM;              \
                                          }                                                       
@@ -226,7 +226,7 @@ struct BCJ_state
 
 static SizeT DecodeBCJ(Byte *data, SizeT *size, BCJ_state *st, const bool last_time)
 {
-    SizeT state = 0, offset;
+    SizeT offset;
     SizeT processed = 0, retain_bytes;
     if (st->retain_buf_size)
         memcpy(data, st->retain_buf, st->retain_buf_size);        // copy 4 bytes in the beginning of buffer
@@ -268,7 +268,7 @@ static SRes SzDecodeLzmaToFileWithBuf(const UInt32 folderIndex, CSzCoderInfo *co
     size_t in_buf_size = 0, in_offset = 0;
     size_t out_size = 0;
     size_t bytes_read, bytes_left;
-    bool StopDecoding = false, to_flush = false;
+    bool StopDecoding = false;
     SizeT out_buf_size = OUT_BUF_SIZE;
     bool to_read = true;
     while(1)                                    // decompressing cycle 
@@ -351,7 +351,7 @@ static SRes SzDecodeLzma2ToFileWithBuf(const UInt32 folderIndex, CSzCoderInfo *c
     size_t in_buf_size = 0, in_offset = 0;
     size_t out_size = 0;
     size_t bytes_read, bytes_left;
-    bool StopDecoding = false, to_flush = false;
+    bool StopDecoding = false;
     SizeT out_buf_size = OUT_BUF_SIZE;
     bool to_read = true;
     while(1)                                    // decompressing cycle 
@@ -416,7 +416,8 @@ static SRes SzDecodeCopyToFileWithBuf(const UInt32 folderIndex, const CSzArEx *d
 {
     if (outSize <= 0 || !inStream )
         return SZ_ERROR_FAIL;
-    Byte *buf = (Byte *)IAlloc_Alloc(allocMain, COPY_BUF_SIZE);
+    Byte *buf;
+    ALLOCATE_BUF(buf, COPY_BUF_SIZE);
     SizeT out_size = 0, bytes_read = 0;
     wr_st_t st;
     write_state_init(st);
@@ -430,7 +431,7 @@ static SRes SzDecodeCopyToFileWithBuf(const UInt32 folderIndex, const CSzArEx *d
         out_size += bytes_read;
     }
     printf("I'm ALIVE! =) I unpacked %d(from %d) bytes\n", out_size, outSize);
-    IAlloc_Free(allocMain, buf);
+    FREE_BUF(buf);
     return SZ_OK;
 }
 
@@ -757,7 +758,6 @@ static SRes ApplyBCJ(IFileStream  *IFile, SizeT total_unpack_size, const UInt32 
     read_state_init(r_st);
     BCJ_state bcj1_st;
     BCJ_state_init(bcj1_st);
-    UInt64 _total_size = 0;
     if (decodeBuf == NULL)
         ALLOCATE_BUF(decodeBuf, myOutBufSize);
 
@@ -792,7 +792,6 @@ static SRes ApplyBCJ2(IFileStream  *IFile, SizeT total_out_size, const UInt32 fo
                       const CSzArEx *db, ISzAlloc *allocMain, Byte *tempBuf[], SizeT tempSizes[])
 {
     Byte *myInBufBitch = NULL, *myOutBufBitch = NULL;
-    Byte bcj2PrevByte = 0;
     wr_st_t wr_st;
     write_state_init(wr_st);
     r_st_t r_st;
@@ -802,7 +801,6 @@ static SRes ApplyBCJ2(IFileStream  *IFile, SizeT total_out_size, const UInt32 fo
     bcj2_st.buf1 = tempBuf[0];
     bcj2_st.buf2 = tempBuf[1];
     bcj2_st.buf3 = tempBuf[2];
-    UInt64 _total_size = 0;
     if (myInBufBitch == NULL)
         ALLOCATE_BUFS(myInBufBitch, IN_BUF_SIZE, myOutBufBitch, OUT_BUF_SIZE);
 
