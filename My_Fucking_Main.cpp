@@ -40,7 +40,7 @@ static char *LetsFind7z(char *fileName)
         }
         fseek(fin, -((int)k7zSignatureSize) + 1, SEEK_CUR);
     }
-    UInt64 bytes_to_write = BUF_SIZE, read;
+    UInt32 bytes_to_write = BUF_SIZE, read;
     while(true)
     {
         read = fread(write_buf, sizeof(Byte), BUF_SIZE, fin);

@@ -196,10 +196,10 @@ static wchar_t * BaseName(wchar_t *path)
 //    wcscat(tempName, baseName);
 //    return tempName;
 //}
-SizeT CountBytesToWrite(const UInt32 folderIndex, const CSzArEx *db, size_t buf_size, pwr_st_t st)
+SizeT CountBytesToWrite(const UInt32 folderIndex, const CSzArEx *db, SizeT buf_size, pwr_st_t st)
 {
-    const SizeT startOffset = st->bytesWritten;
-    SizeT filesOffsetSums = 0;
+    const UInt64 startOffset = st->bytesWritten;
+    UInt64 filesOffsetSums = 0;
     SizeT bytesToWriteInCurFile = 0;
     for (UInt32 i = 0; i < db->db.NumFiles; i++)
     {
@@ -223,7 +223,7 @@ SizeT CountBytesToWrite(const UInt32 folderIndex, const CSzArEx *db, size_t buf_
             else                                                                // need to split writing into several files
             {
                 st->FitsToOneFile = false;
-                return filesOffsetSums - startOffset;
+                return (SizeT)(filesOffsetSums - startOffset);
             }
         }
     }

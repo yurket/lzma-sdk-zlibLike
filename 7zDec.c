@@ -217,7 +217,7 @@ static SRes SzDecodeLzma(CSzCoderInfo *coder, UInt64 inSize, ILookInStream *inSt
 
 struct BCJ_state
 {
-    UInt64 ip;
+    UInt32 ip;
     UInt32 x86_state;
     Byte *retain_buf;
     UInt32 retain_buf_size;
@@ -226,8 +226,8 @@ struct BCJ_state
 
 static SizeT DecodeBCJ(Byte *data, SizeT *size, BCJ_state *st, const bool last_time)
 {
-    UInt32 state = 0, offset;
-    UInt64 processed = 0, retain_bytes;
+    SizeT state = 0, offset;
+    SizeT processed = 0, retain_bytes;
     if (st->retain_buf_size)
         memcpy(data, st->retain_buf, st->retain_buf_size);        // copy 4 bytes in the beginning of buffer
     *size += st->retain_buf_size;
@@ -826,7 +826,7 @@ static SRes ApplyBCJ2(IFileStream  *IFile, SizeT total_out_size, const UInt32 fo
     }
 
     FREE_BUFS(myInBufBitch, myOutBufBitch);
-    
+    return SZ_OK;
 }
 static SRes SzFolder_Decode2ToFile(const CSzFolder *folder, const UInt32 folderIndex, const UInt64 *packSizes,
                              ILookInStream *inStream, IFileStream  *IFile, const CSzArEx *db, UInt64 startPos,

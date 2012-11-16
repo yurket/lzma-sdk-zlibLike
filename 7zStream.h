@@ -2,7 +2,7 @@
 typedef struct write_state
 {
     SizeT outSize;
-    SizeT bytesWritten;
+    UInt64 bytesWritten;
     UInt32 fileToWriteIndex;          // index in CSzArEx db
     CSzFile out_file;
     bool fileOpened;
