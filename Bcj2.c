@@ -21,6 +21,10 @@
                             st->ttt = ttt; st->b = b; st->prev_byte = prevByte;     \
                             st->prob = prob;                                        \
                         };
+#define LOAD_STATE(st) {    range = st->range; code = st->code; prevByte = st->prev_byte;   \
+                            prob = st->prob; bound = st->bound; ttt = st->ttt; b = st->b;   \
+                            p = st->p; buf1 = st->buf1; buf2 = st->buf2; buf3 = st->buf3;   \
+                        }
 int Bcj2_Decode(
     const Byte *buf0, SizeT size0,
     const Byte *buf1, SizeT size1,
@@ -134,21 +138,16 @@ int Bcj2_DecodeToFileWithBufs(
                 Byte *buf3, SizeT *size3,
                 Byte *outBuf, SizeT outSize,
                 pBcj2_st st)
-{
-    CProb *p = st->p;
+{ 
+    CProb *p;
     SizeT inPos = 0, outPos = 0;
 
     Byte *buffer, *bufferLim;
-    UInt32 range = st->range, code = st->code;
-    Byte prevByte = st->prev_byte;
-    buf1 = st->buf1;
-    buf2 = st->buf2;
-    buf3 = st->buf3;
-    Byte b = st->b;
-    CProb *prob = st->prob ;
-    UInt32 bound = st->bound;
-    UInt32 ttt = st->ttt;
-
+    UInt32 range, code;
+    Byte b, prevByte;
+    CProb *prob;
+    UInt32 bound, ttt;
+    LOAD_STATE(st);
     buffer = buf3;
     bufferLim = buffer + *size3;
     if (range == 0xFFFFFFFF)

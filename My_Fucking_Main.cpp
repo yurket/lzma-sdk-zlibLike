@@ -110,8 +110,6 @@ int main(int argc, char *argv[])
     printf("file count: %d, NumPackSterams: %d, \n", db.db.NumFiles, db.db.NumPackStreams);
     printf("====================================================\n");
 
-    //}
-
     for (i = 0, pOffsets = db.FileNameOffsets; i < db.db.NumFiles; i++)
     {
         CSzFileItem *file = db.db.Files + i;
