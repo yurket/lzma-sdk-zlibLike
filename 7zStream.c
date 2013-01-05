@@ -174,6 +174,33 @@ void SecToRead_CreateVTable(CSecToRead *p)
 
 // ===========================================================================
 
+#define OPEN_FILE_OUT(File, fileName)           if (IFile->OpenOutFile(File, fileName))                              \
+                                                {                                                               \
+                                                    wprintf(L"can not open output file \"%s\"\n", fileName);    \
+                                                    return SZ_ERROR_FAIL;                                        \
+                                                }        
+
+#define OPEN_FILE_IN(File, fileName)            if (IFile->OpenInFile(File, fileName))                          \
+                                                {                                                               \
+                                                    wprintf(L"can not open input file \"%s\"\n", fileName);    \
+                                                    return SZ_ERROR_FAIL;                                       \
+                                                }
+
+#define F_WRITE(outFile, buf, size)             {                                                       \
+                                                    SizeT written = IFile->FileWrite(outFile, buf, size); \
+                                                    if (written != size) {                              \
+                                                        wprintf(L"error: not all data written! %d bytes", written);     \
+                                                        return SZ_ERROR_FAIL;                                           \
+                                                    }                                                   \
+                                                    size = written;                                     \
+                                                }
+
+#define F_READ(inFile, buf, size)               if (IFile->FileRead(inFile, buf, size))                       \
+                                                {                                                       \
+                                                    wprintf(L"can not read file");                      \
+                                                    res = SZ_ERROR_READ;                                \
+                                                }
+
 static wchar_t * BaseName(wchar_t *path)
 {
     bool dir_in_path = false;
@@ -203,7 +230,7 @@ SizeT CountBytesToWrite(const UInt32 folderIndex, const CSzArEx *db, SizeT buf_s
     SizeT bytesToWriteInCurFile = 0;
     for (UInt32 i = 0; i < db->db.NumFiles; i++)
     {
-        if (db->FileIndexToFolderIndexMap[i] != folderIndex)        // skip files from others folders
+        if (db->FileIndexToFolderIndexMap[i] != folderIndex)        // skip files from other folders
             continue;
 
         CSzFileItem &curFile = db->db.Files[i];
