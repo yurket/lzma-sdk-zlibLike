@@ -59,17 +59,20 @@ WRes OutFile_Open(CSzFile *p, const char *name) { return File_Open(p, name, 1); 
 #endif
 
 #ifdef USE_WINDOWS_FILE
-static WRes File_OpenW(CSzFile *p, const WCHAR *name, int writeMode)
+static WRes File_OpenW(CSzFile *p, const WCHAR *name, int writeMode, int tempMode)
 {
-  p->handle = CreateFileW(name,
+    if (name == NULL && !tempMode)
+        return -1;
+
+    p->handle = CreateFileW(tempMode? L"temp.dat" : name,
       writeMode ? GENERIC_WRITE : GENERIC_READ,
       FILE_SHARE_READ, NULL,
       writeMode ? CREATE_ALWAYS : OPEN_EXISTING,
       FILE_ATTRIBUTE_NORMAL, NULL);
   return (p->handle != INVALID_HANDLE_VALUE) ? 0 : GetLastError();
 }
-WRes InFile_OpenW(CSzFile *p, const WCHAR *name) { return File_OpenW(p, name, 0); }
-WRes OutFile_OpenW(CSzFile *p, const WCHAR *name) { return File_OpenW(p, name, 1); }
+WRes InFile_OpenW(CSzFile *p, const WCHAR *name, int isTemp) { return File_OpenW(p, name, 0, isTemp); }
+WRes OutFile_OpenW(CSzFile *p, const WCHAR *name, int isTemp) { return File_OpenW(p, name, 1, isTemp); }
 #endif
 
 WRes File_Close(CSzFile *p)
@@ -284,16 +287,16 @@ void FileOutStream_CreateVTable(CFileOutStream *p)
 
 
 /* ------------ IFileStream ------------ */
-static WRes IFileStream_OpenWrite(void *pp, const WCHAR *name)
+static WRes IFileStream_OpenWrite(void *pp, const WCHAR *name, int isTemp)
 {
     CSzFile *p = (CSzFile *)pp;
-    return OutFile_OpenW(p, name);
+    return OutFile_OpenW(p, name, isTemp);
 }
 
-static WRes IFileStream_OpenRead(void *pp, const WCHAR *name)
+static WRes IFileStream_OpenRead(void *pp, const WCHAR *name, int isTemp)
 {
     CSzFile *p = (CSzFile *)pp;
-    return InFile_OpenW(p, name);
+    return InFile_OpenW(p, name, isTemp);
 }
 
 static size_t IFileStream_Write(void *pp, const void *data, size_t size)

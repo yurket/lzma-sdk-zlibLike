@@ -155,8 +155,8 @@ typedef struct
 
 /*    interface to deal with files    */
 typedef struct {
-    WRes (*OpenOutFile)(void *p, const WCHAR *name);
-    WRes (*OpenInFile)(void *p, const WCHAR *name);
+    WRes (*OpenOutFile)(void *p, const WCHAR *name, int isTemp);
+    WRes (*OpenInFile)(void *p, const WCHAR *name, int isTemp);
     size_t (*FileWrite)(void *p, const void *buf, size_t size);
     SRes (*FileRead)(void *p, void *buf, size_t *size);
     void (*FileClose)(void *p);

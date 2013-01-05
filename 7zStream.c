@@ -174,15 +174,15 @@ void SecToRead_CreateVTable(CSecToRead *p)
 
 // ===========================================================================
 
-#define OPEN_FILE_OUT(File, fileName)           if (IFile->OpenOutFile(File, fileName))                              \
+#define OPEN_FILE_OUT(File, fileName, isTemp)   if (IFile->OpenOutFile(File, fileName, isTemp))                              \
                                                 {                                                               \
-                                                    wprintf(L"can not open output file \"%s\"\n", fileName);    \
+                                                    wprintf(L"can not open output file\n");    \
                                                     return SZ_ERROR_FAIL;                                        \
                                                 }        
 
-#define OPEN_FILE_IN(File, fileName)            if (IFile->OpenInFile(File, fileName))                          \
+#define OPEN_FILE_IN(File, fileName, isTemp)    if (IFile->OpenInFile(File, fileName, isTemp))                          \
                                                 {                                                               \
-                                                    wprintf(L"can not open input file \"%s\"\n", fileName);    \
+                                                    wprintf(L"can not open input file\n");    \
                                                     return SZ_ERROR_FAIL;                                       \
                                                 }
 
@@ -200,6 +200,9 @@ void SecToRead_CreateVTable(CSecToRead *p)
                                                     wprintf(L"can not read file");                      \
                                                     res = SZ_ERROR_READ;                                \
                                                 }
+
+#define TEMP_FILE   1
+#define NOT_TEMP    0
 
 static wchar_t * BaseName(wchar_t *path)
 {
@@ -281,7 +284,7 @@ SRes WriteStream(IFileStream  *IFile, const UInt32 folderIndex, const CSzArEx *d
 
         if (!st->fileOpened)
         {
-            OPEN_FILE_OUT(&st->out_file, fileName);
+            OPEN_FILE_OUT(&st->out_file, fileName, NOT_TEMP);
             st->fileOpened = true;
         }
 
@@ -308,14 +311,13 @@ SRes WriteStream(IFileStream  *IFile, const UInt32 folderIndex, const CSzArEx *d
 SRes WriteTempStream(IFileStream  *IFile, Byte *buf, size_t buf_size, bool StopWriting, pwr_st_t st)
 {
     SRes res = SZ_OK;
-    wchar_t *fileName = L"temp.dat";
     if (buf == NULL)
         return SZ_ERROR_DATA;
     if (buf_size == 0)
         return SZ_OK;
     if (!st->fileOpened)
     {
-        OPEN_FILE_OUT(&st->out_file, fileName);
+        OPEN_FILE_OUT(&st->out_file, NULL, TEMP_FILE);
         st->fileOpened = true;
     }
 
@@ -337,14 +339,13 @@ SRes WriteTempStream(IFileStream  *IFile, Byte *buf, size_t buf_size, bool StopW
 SRes ReadTempStream(IFileStream  *IFile, Byte *buf, size_t *buf_size, pr_st_t st)
 {
     SRes res = SZ_OK;
-    wchar_t *fileName = L"temp.dat";
     if (buf == NULL)
         return SZ_ERROR_DATA;
     if (*buf_size == 0)
         return SZ_OK;
     if (!st->fileOpened)
     {
-        OPEN_FILE_IN(&st->in_file, fileName);
+        OPEN_FILE_IN(&st->in_file, NULL, TEMP_FILE);
         st->fileOpened = true;
     }
 
