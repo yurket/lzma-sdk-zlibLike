@@ -35,8 +35,8 @@ WRes InFile_Open(CSzFile *p, const char *name);
 WRes OutFile_Open(CSzFile *p, const char *name);
 #endif
 #ifdef USE_WINDOWS_FILE
-WRes InFile_OpenW(CSzFile *p, const WCHAR *name);
-WRes OutFile_OpenW(CSzFile *p, const WCHAR *name);
+WRes InFile_OpenW(CSzFile *p, const WCHAR *name, int writeMode);
+WRes OutFile_OpenW(CSzFile *p, const WCHAR *name, int writeMode);
 #endif
 WRes File_Close(CSzFile *p);
 

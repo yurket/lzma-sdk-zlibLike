@@ -34,7 +34,7 @@ void File_Construct(CSzFile *p)
 }
 
 #if !defined(UNDER_CE) || !defined(USE_WINDOWS_FILE)
-static WRes File_Open(CSzFile *p, const char *name, int writeMode)
+WRes File_Open(CSzFile *p, const char *name, int writeMode)
 {
   #ifdef USE_WINDOWS_FILE
   p->handle = CreateFileA(name,
@@ -59,12 +59,12 @@ WRes OutFile_Open(CSzFile *p, const char *name) { return File_Open(p, name, 1); 
 #endif
 
 #ifdef USE_WINDOWS_FILE
-static WRes File_OpenW(CSzFile *p, const WCHAR *name, int writeMode, int tempMode)
+WRes File_OpenW(CSzFile *p, const WCHAR *name, int writeMode, int isTemp)
 {
-    if (name == NULL && !tempMode)
+    if (name == NULL && !isTemp)
         return 1;
 
-    p->handle = CreateFileW(tempMode? L"temp.dat" : name,
+    p->handle = CreateFileW(isTemp? L"temp.dat" : name,                     // it would be better to generate some pseudorandom name
       writeMode ? GENERIC_WRITE : GENERIC_READ,
       FILE_SHARE_READ, NULL,
       writeMode ? CREATE_ALWAYS : OPEN_EXISTING,
