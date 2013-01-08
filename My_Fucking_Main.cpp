@@ -100,7 +100,7 @@ int main(int argc, char *argv[])
     lookStream.realStream = &archiveStream.s;
     LookToRead_Init(&lookStream);
     
-    IFileStream_CreateVTable(&IFile);
+    IFileStream_CreateVTable(&IFile, &allocImp);
     CrcGenerateTable();
 
     SzArEx_Init(&db);

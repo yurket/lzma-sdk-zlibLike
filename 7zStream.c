@@ -172,22 +172,22 @@ void SecToRead_CreateVTable(CSecToRead *p)
 }
 
 
-// ===========================================================================
+// ===============================================================================================================
 
-#define OPEN_FILE_OUT(File, fileName, isTemp)   if (IFile->OpenOutFile(File, fileName, isTemp))                              \
+#define OPEN_FILE_OUT(fileName, isTemp)         if (IFile->OpenOutFile(IFile, fileName, isTemp))                              \
                                                 {                                                               \
                                                     wprintf(L"can not open output file\n");    \
                                                     return SZ_ERROR_FAIL;                                        \
                                                 }        
 
-#define OPEN_FILE_IN(File, fileName, isTemp)    if (IFile->OpenInFile(File, fileName, isTemp))                          \
+#define OPEN_FILE_IN(fileName, isTemp)          if (IFile->OpenInFile(IFile, fileName, isTemp))                          \
                                                 {                                                               \
                                                     wprintf(L"can not open input file\n");    \
                                                     return SZ_ERROR_FAIL;                                       \
                                                 }
 
-#define F_WRITE(outFile, buf, size)             {                                                       \
-                                                    SizeT written = IFile->FileWrite(outFile, buf, size); \
+#define F_WRITE(buf, size, isTemp)              {                                                       \
+                                                    SizeT written = IFile->FileWrite(IFile, buf, size, isTemp); \
                                                     if (written != size) {                              \
                                                         wprintf(L"error: not all data written! %d bytes", written);     \
                                                         return SZ_ERROR_FAIL;                                           \
@@ -195,7 +195,7 @@ void SecToRead_CreateVTable(CSecToRead *p)
                                                     size = written;                                     \
                                                 }
 
-#define F_READ(inFile, buf, size)               if (IFile->FileRead(inFile, buf, size))                       \
+#define F_READ(buf, size, isTemp)               if (IFile->FileRead(IFile, buf, size, isTemp))                       \
                                                 {                                                       \
                                                     wprintf(L"can not read file");                      \
                                                     res = SZ_ERROR_READ;                                \
@@ -284,14 +284,14 @@ SRes WriteStream(IFileStream  *IFile, const UInt32 folderIndex, const CSzArEx *d
 
         if (!st->fileOpened)
         {
-            OPEN_FILE_OUT(&st->out_file, fileName, NOT_TEMP);
+            OPEN_FILE_OUT(fileName, NOT_TEMP);
             st->fileOpened = true;
         }
 
         while(bytesToWrite)
         {
             size_t bytesWritten = bytesToWrite;
-            F_WRITE(&st->out_file, buf + offset, bytesWritten);
+            F_WRITE(buf + offset, bytesWritten, NOT_TEMP);
             bytesToWrite -= bytesWritten;
             buf_size -= bytesWritten;
             offset += bytesWritten;
@@ -299,7 +299,7 @@ SRes WriteStream(IFileStream  *IFile, const UInt32 folderIndex, const CSzArEx *d
         }
         if (!st->FitsToOneFile)
         {
-            IFile->FileClose(&st->out_file);
+            IFile->FileClose(IFile, NOT_TEMP);
             st->fileOpened = false;
         }
     }
@@ -317,20 +317,20 @@ SRes WriteTempStream(IFileStream  *IFile, Byte *buf, size_t buf_size, bool StopW
         return SZ_OK;
     if (!st->fileOpened)
     {
-        OPEN_FILE_OUT(&st->out_file, NULL, TEMP_FILE);
+        OPEN_FILE_OUT(NULL, TEMP_FILE);
         st->fileOpened = true;
     }
 
     while (buf_size)
     {
         SizeT bytes_to_write = buf_size;
-        F_WRITE(&st->out_file, buf, bytes_to_write);
+        F_WRITE(buf, bytes_to_write, TEMP_FILE);
         buf_size -= bytes_to_write;
     }
 
     if (StopWriting)
     {
-        IFile->FileClose(&st->out_file);
+        IFile->FileClose(IFile, TEMP_FILE);
         st->fileOpened = false;
     }
 
@@ -345,16 +345,16 @@ SRes ReadTempStream(IFileStream  *IFile, Byte *buf, size_t *buf_size, pr_st_t st
         return SZ_OK;
     if (!st->fileOpened)
     {
-        OPEN_FILE_IN(&st->in_file, NULL, TEMP_FILE);
+        OPEN_FILE_IN(NULL, TEMP_FILE);
         st->fileOpened = true;
     }
 
     SizeT bytes_to_read = *buf_size;
-    F_READ(&st->in_file, buf, &bytes_to_read);
+    F_READ(buf, &bytes_to_read, TEMP_FILE);
 
     if (bytes_to_read < *buf_size || res )
     {
-        IFile->FileClose(&st->in_file);
+        IFile->FileClose(IFile, TEMP_FILE);
         st->fileOpened = false;
     }
     *buf_size = bytes_to_read;

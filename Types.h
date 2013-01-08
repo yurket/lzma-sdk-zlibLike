@@ -153,17 +153,6 @@ typedef struct
        (result < size) means error */
 } ISeqOutStream;
 
-/*    interface to deal with files    */
-typedef struct {
-    WRes (*OpenOutFile)(void *p, const WCHAR *name, int isTemp);
-    WRes (*OpenInFile)(void *p, const WCHAR *name, int isTemp);
-    size_t (*FileWrite)(void *p, const void *buf, size_t size);
-    SRes (*FileRead)(void *p, void *buf, size_t *size);
-    void (*FileClose)(void *p);
-    void (*FileRemove) (void *p);
-} IFileStream;
-
-void IFileStream_CreateVTable(IFileStream *p);
 typedef enum
 {
   SZ_SEEK_SET = 0,
@@ -243,6 +232,21 @@ typedef struct
 
 #define IAlloc_Alloc(p, size) (p)->Alloc((p), size)
 #define IAlloc_Free(p, a) (p)->Free((p), a)
+
+/*    interface to deal with files    */
+typedef struct {
+    WRes (*OpenOutFile)(void *p, const WCHAR *name, int isTemp);
+    WRes (*OpenInFile)(void *p, const WCHAR *name, int isTemp);
+    size_t (*FileWrite)(void *p, const void *buf, size_t size, int isTemp);
+    SRes (*FileRead)(void *p, void *buf, size_t *size, int isTemp);
+    void (*FileClose)(void *p, int isTemp);
+    void (*FileRemove) (void *p);
+    void *tempFile;
+    void *realFile;
+    ISzAlloc *mem_alctr;
+} IFileStream;
+
+void IFileStream_CreateVTable(IFileStream *p, ISzAlloc *);
 
 #ifdef _WIN32
 
