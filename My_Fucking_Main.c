@@ -30,7 +30,7 @@ static char *LetsFind7z(char *fileName)
         return NULL;
     }
 
-    while (true)
+    while (True)
     {
         fread(buf, sizeof(Byte), k7zSignatureSize, fin);
         if (TestSignatureCandidate(buf))
@@ -41,7 +41,7 @@ static char *LetsFind7z(char *fileName)
         fseek(fin, -((int)k7zSignatureSize) + 1, SEEK_CUR);
     }
     UInt32 bytes_to_write = BUF_SIZE, read;
-    while(true)
+    while(True)
     {
         read = fread(write_buf, sizeof(Byte), BUF_SIZE, fin);
         if (read == 0)

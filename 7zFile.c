@@ -362,7 +362,7 @@ static SRes FileDelete(const void *name)
 #endif
 }
 
-static void IFileStream_DeleteFile(void *pp)
+static void IFileStream_DeleteFile(const void *pp)
 {
     FileDelete(pp);
 }

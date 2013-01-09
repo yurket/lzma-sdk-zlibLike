@@ -6,7 +6,6 @@
 /* #define _7ZIP_PPMD_SUPPPORT */
 
 #include "7z.h"
-
 #include "Bcj2.h"
 #include "Bra.h"
 #include "CpuArch.h"
@@ -207,7 +206,7 @@ static SRes SzDecodeLzma(CSzCoderInfo *coder, UInt64 inSize, ILookInStream *inSt
                                             state.x86_state = 0;                                                                \
                                             state.retain_buf = (Byte *)IAlloc_Alloc(allocMain, RETAIN_BUF_SIZE);            \
                                             state.retain_buf_size = 0;                                                          \
-                                            state.FirstBuffer = true;                                                           \
+                                            state.FirstBuffer = True;                                                           \
                                         }
 #define BCJ_state_free(state)           FREE_BUF(state.retain_buf);
 
@@ -221,10 +220,10 @@ struct BCJ_state
     UInt32 x86_state;
     Byte *retain_buf;
     UInt32 retain_buf_size;
-    bool FirstBuffer;
+    Bool FirstBuffer;
 };
 
-static SizeT DecodeBCJ(Byte *data, SizeT *size, BCJ_state *st, const bool last_time)
+static SizeT DecodeBCJ(Byte *data, SizeT *size, BCJ_state *st, Bool last_time)
 {
     SizeT offset;
     SizeT processed = 0, retain_bytes;
@@ -250,12 +249,21 @@ static SizeT DecodeBCJ(Byte *data, SizeT *size, BCJ_state *st, const bool last_t
 
 static SRes SzDecodeLzmaToFileWithBuf(const UInt32 folderIndex, CSzCoderInfo *coder, const CSzArEx *db, 
                                       ILookInStream *inStream, IFileStream  *IFile, SizeT outSize, 
-                                      ISzAlloc *allocMain, bool filterPresent)
+                                      ISzAlloc *allocMain, Bool filterPresent)
 {
     Byte *myInBufBitch = NULL;
     Byte *myOutBufBitch = NULL;
     SRes res = 0;
     CLzmaDec state;
+    wr_st_t st;
+    
+    size_t in_buf_size = 0, in_offset = 0;
+    size_t out_size = 0;
+    size_t bytes_read, bytes_left;
+    Bool StopDecoding = False;
+    SizeT out_buf_size = OUT_BUF_SIZE;
+    Bool to_read = True;
+    write_state_init(st);
     LzmaDec_Construct(&state);
     LzmaDec_Allocate(&state, coder->Props.data,coder->Props.size, allocMain);
     LzmaDec_Init(&state);
@@ -263,14 +271,7 @@ static SRes SzDecodeLzmaToFileWithBuf(const UInt32 folderIndex, CSzCoderInfo *co
     if (myInBufBitch == NULL)
         ALLOCATE_BUFS(myInBufBitch, IN_BUF_SIZE, myOutBufBitch, OUT_BUF_SIZE);
 
-    wr_st_t st;
-    write_state_init(st);
-    size_t in_buf_size = 0, in_offset = 0;
-    size_t out_size = 0;
-    size_t bytes_read, bytes_left;
-    bool StopDecoding = false;
-    SizeT out_buf_size = OUT_BUF_SIZE;
-    bool to_read = true;
+
     while(1)                                    // decompressing cycle 
     {
         ELzmaFinishMode finishMode = LZMA_FINISH_ANY;
@@ -291,7 +292,7 @@ static SRes SzDecodeLzmaToFileWithBuf(const UInt32 folderIndex, CSzCoderInfo *co
         res = LzmaDec_DecodeToBuf(&state, myOutBufBitch, &out_buf_size, myInBufBitch + in_offset, &in_buf_size, finishMode, &status);
         if (in_buf_size == 0 || res != SZ_OK)
         {
-            StopDecoding = true;
+            StopDecoding = True;
             printf("something bad happened =( \n");
             return SZ_ERROR_FAIL;
         }
@@ -300,12 +301,12 @@ static SRes SzDecodeLzmaToFileWithBuf(const UInt32 folderIndex, CSzCoderInfo *co
 
         if (in_buf_size < bytes_read && in_buf_size)           // not whole in_buf was decompressed
         {
-            to_read = false;
+            to_read = False;
             in_offset += in_buf_size;
             in_buf_size = bytes_left;
         }
         
-        StopDecoding = (out_size >= outSize)? true : false;
+        StopDecoding = (out_size >= outSize)? True : False;
         if (bytes_left == 0 || out_buf_size == OUT_BUF_SIZE || StopDecoding)   // whole in_buf was decompressed
         {
             if (filterPresent)
@@ -315,7 +316,7 @@ static SRes SzDecodeLzmaToFileWithBuf(const UInt32 folderIndex, CSzCoderInfo *co
 
             if (bytes_left == 0)
             {
-                to_read = true;
+                to_read = True;
                 in_offset = 0;
             }
             out_buf_size = OUT_BUF_SIZE;
@@ -333,7 +334,7 @@ static SRes SzDecodeLzmaToFileWithBuf(const UInt32 folderIndex, CSzCoderInfo *co
 
 static SRes SzDecodeLzma2ToFileWithBuf(const UInt32 folderIndex, CSzCoderInfo *coder, const CSzArEx *db, 
                                        ILookInStream *inStream, IFileStream  *IFile, SizeT outSize, 
-                                      ISzAlloc *allocMain, bool filterPresent)
+                                      ISzAlloc *allocMain, Bool filterPresent)
 {
     Byte *myInBufBitch = NULL;
     Byte *myOutBufBitch = NULL;
@@ -351,9 +352,9 @@ static SRes SzDecodeLzma2ToFileWithBuf(const UInt32 folderIndex, CSzCoderInfo *c
     size_t in_buf_size = 0, in_offset = 0;
     size_t out_size = 0;
     size_t bytes_read, bytes_left;
-    bool StopDecoding = false;
+    Bool StopDecoding = False;
     SizeT out_buf_size = OUT_BUF_SIZE;
-    bool to_read = true;
+    Bool to_read = True;
     while(1)                                    // decompressing cycle 
     {
         ELzmaFinishMode finishMode = LZMA_FINISH_ANY;
@@ -374,7 +375,7 @@ static SRes SzDecodeLzma2ToFileWithBuf(const UInt32 folderIndex, CSzCoderInfo *c
         Lzma2Dec_DecodeToBuf(&state, myOutBufBitch, &out_buf_size, myInBufBitch + in_offset, &in_buf_size, finishMode, &status);
         if (in_buf_size == 0)
         {
-            StopDecoding = true;
+            StopDecoding = True;
             printf("lzma2 decode: something bad happened =( \n");
             return SZ_ERROR_FAIL;
         }
@@ -383,12 +384,12 @@ static SRes SzDecodeLzma2ToFileWithBuf(const UInt32 folderIndex, CSzCoderInfo *c
 
         if (in_buf_size < bytes_read && in_buf_size)           // not whole in_buf was decompressed
         {
-            to_read = false;
+            to_read = False;
             in_offset += in_buf_size;
             in_buf_size = bytes_left;
         }
 
-        StopDecoding = (out_size >= outSize)? true : false;
+        StopDecoding = (out_size >= outSize)? True : False;
         if (bytes_left == 0 || out_buf_size == OUT_BUF_SIZE || StopDecoding)   // whole in_buf was decompressed
         {
             if (filterPresent)
@@ -397,7 +398,7 @@ static SRes SzDecodeLzma2ToFileWithBuf(const UInt32 folderIndex, CSzCoderInfo *c
                 WriteStream(IFile, folderIndex, db, myOutBufBitch, out_buf_size, &st);
             if (bytes_left == 0)
             {
-                to_read = true;
+                to_read = True;
                 in_offset = 0;
             }
             out_buf_size = OUT_BUF_SIZE;
@@ -738,12 +739,12 @@ SRes SzFolder_Decode(const CSzFolder *folder, const UInt64 *packSizes,
 
 
 
-static bool DetectFilter(const CSzFolder *folder)
+static Bool DetectFilter(const CSzFolder *folder)
 {
     if (folder->NumCoders == 2 && folder->Coders[1].MethodID == k_BCJ )
-        return true;
+        return True;
     else if (folder->NumCoders == 4 && folder->Coders[3].MethodID == k_BCJ2)
-        return true;
+        return True;
     else
         return 0;
 }
@@ -764,10 +765,10 @@ static SRes ApplyBCJ(IFileStream  *IFile, SizeT total_unpack_size, const UInt32 
     {
         SizeT processed = 0, bytes_read = OUT_BUF_SIZE;
         SizeT retain_offset = 0;
-        bool LastBuf = false;
+        Bool LastBuf = False;
         RINOK(ReadTempStream(IFile, decodeBuf + RETAIN_BUF_SIZE, &bytes_read, &r_st));
         if (bytes_read < IN_BUF_SIZE)
-            LastBuf = true;
+            LastBuf = True;
         processed = DecodeBCJ(decodeBuf, &bytes_read, &bcj1_st, LastBuf);
 
         if (processed == 0)
@@ -775,7 +776,7 @@ static SRes ApplyBCJ(IFileStream  *IFile, SizeT total_unpack_size, const UInt32 
         if (bcj1_st.FirstBuffer)               // first out buffer should strart from offset RETAIN_BUF_SIZE
         {
             retain_offset = RETAIN_BUF_SIZE;
-            bcj1_st.FirstBuffer = false;
+            bcj1_st.FirstBuffer = False;
         }
         RINOK(WriteStream(IFile, folderIndex, db, decodeBuf + retain_offset, processed, &wr_st));
         total_unpack_size -= processed;
@@ -841,7 +842,7 @@ static SRes SzFolder_Decode2ToFile(const CSzFolder *folder, const UInt32 folderI
     for (ci = 0; ci < folder->NumCoders; ci++)
     {
         CSzCoderInfo *coder = &folder->Coders[ci];
-        const bool FilterPresent = DetectFilter(folder);
+        const Bool FilterPresent = DetectFilter(folder);
         if (IS_MAIN_METHOD((UInt32)coder->MethodID))
         {
             UInt32 si = 0;
@@ -849,7 +850,7 @@ static SRes SzFolder_Decode2ToFile(const CSzFolder *folder, const UInt32 folderI
             UInt64 inSize;
             Byte *outBufCur = NULL;
             
-            bool unpackInMem = false;                               // for small buffers within unpacking BCJ2 we can use 
+            Bool unpackInMem = False;                               // for small buffers within unpacking BCJ2 we can use 
                                                                     // unpacking in memory
             if (folder->NumCoders == 4)
             {
@@ -859,7 +860,7 @@ static SRes SzFolder_Decode2ToFile(const CSzFolder *folder, const UInt32 folderI
                 if (ci < 2)
                 {
                     Byte *temp;
-                    unpackInMem = true;
+                    unpackInMem = True;
                     outSizeCur = (SizeT)unpackSize;                   // 4176, 9k,
                     if (outSizeCur != unpackSize)
                         return SZ_ERROR_MEM;

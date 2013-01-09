@@ -278,7 +278,7 @@ SRes SzReadTime(const CObjectVector<CBuf> &dataVector,
   {
     CSzFileItem &file = files[i];
     CArchiveFileTime fileTime;
-    bool defined = boolVector[i];
+    Bool defined = boolVector[i];
     if (defined)
     {
       UInt32 low, high;

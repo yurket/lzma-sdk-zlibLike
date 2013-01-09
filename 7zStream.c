@@ -2,9 +2,9 @@
 2010-03-11 : Igor Pavlov : Public domain */
 
 #include <string.h>
+#include <stdio.h>
 
 #include "Types.h"
-#include "stdio.h"
 #include "7z.h"
 #include "7zStream.h"
 
@@ -206,11 +206,11 @@ void SecToRead_CreateVTable(CSecToRead *p)
 
 static wchar_t * BaseName(wchar_t *path)
 {
-    bool dir_in_path = false;
+    Bool dir_in_path = False;
     wchar_t *p = path;
     while (*p++)
         if ( *p == (wchar_t)'\\' || *p == (wchar_t)'/')
-            dir_in_path = true;
+            dir_in_path = TRUE;
     if (dir_in_path)
     {
         while ((*--p != (wchar_t)'\\') && (*p != (wchar_t)'/'));
@@ -247,12 +247,12 @@ SizeT CountBytesToWrite(const UInt32 folderIndex, const CSzArEx *db, SizeT buf_s
             Int64 remForCurFile = (Int64)filesOffsetSums - (startOffset + buf_size);    // must be signed
             if ( remForCurFile > 0 )                                             // whole buf fits to current file
             {
-                st->FitsToOneFile = true;
+                st->FitsToOneFile = TRUE;
                 return buf_size;
             }
             else                                                                // need to split writing into several files
             {
-                st->FitsToOneFile = false;
+                st->FitsToOneFile = False;
                 bytesToWriteInCurFile = (SizeT)(filesOffsetSums - startOffset);
                 return bytesToWriteInCurFile;
             }
@@ -285,7 +285,7 @@ SRes WriteStream(IFileStream  *IFile, const UInt32 folderIndex, const CSzArEx *d
         if (!st->fileOpened)
         {
             OPEN_FILE_OUT(fileName, NOT_TEMP);
-            st->fileOpened = true;
+            st->fileOpened = TRUE;
         }
 
         while(bytesToWrite)
@@ -300,7 +300,7 @@ SRes WriteStream(IFileStream  *IFile, const UInt32 folderIndex, const CSzArEx *d
         if (!st->FitsToOneFile)
         {
             IFile->FileClose(IFile, NOT_TEMP);
-            st->fileOpened = false;
+            st->fileOpened = False;
         }
     }
 
@@ -308,7 +308,7 @@ SRes WriteStream(IFileStream  *IFile, const UInt32 folderIndex, const CSzArEx *d
 }
 
 
-SRes WriteTempStream(IFileStream  *IFile, Byte *buf, size_t buf_size, bool StopWriting, pwr_st_t st)
+SRes WriteTempStream(IFileStream  *IFile, Byte *buf, size_t buf_size, Bool StopWriting, pwr_st_t st)
 {
     SRes res = SZ_OK;
     if (buf == NULL)
@@ -318,7 +318,7 @@ SRes WriteTempStream(IFileStream  *IFile, Byte *buf, size_t buf_size, bool StopW
     if (!st->fileOpened)
     {
         OPEN_FILE_OUT(NULL, TEMP_FILE);
-        st->fileOpened = true;
+        st->fileOpened = TRUE;
     }
 
     while (buf_size)
@@ -331,7 +331,7 @@ SRes WriteTempStream(IFileStream  *IFile, Byte *buf, size_t buf_size, bool StopW
     if (StopWriting)
     {
         IFile->FileClose(IFile, TEMP_FILE);
-        st->fileOpened = false;
+        st->fileOpened = False;
     }
 
     return res;
@@ -346,7 +346,7 @@ SRes ReadTempStream(IFileStream  *IFile, Byte *buf, size_t *buf_size, pr_st_t st
     if (!st->fileOpened)
     {
         OPEN_FILE_IN(NULL, TEMP_FILE);
-        st->fileOpened = true;
+        st->fileOpened = TRUE;
     }
 
     SizeT bytes_to_read = *buf_size;
@@ -355,7 +355,7 @@ SRes ReadTempStream(IFileStream  *IFile, Byte *buf, size_t *buf_size, pr_st_t st
     if (bytes_to_read < *buf_size || res )
     {
         IFile->FileClose(IFile, TEMP_FILE);
-        st->fileOpened = false;
+        st->fileOpened = False;
     }
     *buf_size = bytes_to_read;
     return res;

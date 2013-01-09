@@ -240,14 +240,13 @@ typedef struct {
     size_t (*FileWrite)(void *p, const void *buf, size_t size, int isTemp);
     SRes (*FileRead)(void *p, void *buf, size_t *size, int isTemp);
     void (*FileClose)(void *p, int isTemp);
-    void (*FileRemove) (void *p);
+    void (*FileRemove) (const void *p);
     void *tempFile;
     void *realFile;
     ISzAlloc *mem_alctr;
 } IFileStream;
 
 void IFileStream_CreateVTable(IFileStream *p, ISzAlloc *);
-
 #ifdef _WIN32
 
 #define CHAR_PATH_SEPARATOR '\\'
