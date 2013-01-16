@@ -243,6 +243,7 @@ typedef struct {
     void (*FileRemove) (const void *p);
     void *tempFile;
     void *realFile;
+    const wchar_t *curFileName;
     ISzAlloc *mem_alctr;
 } IFileStream;
 

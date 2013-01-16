@@ -287,7 +287,7 @@ void FileOutStream_CreateVTable(CFileOutStream *p)
 
 
 /* ------------ IFileStream ------------ */
-static WRes IFileStream_OpenWrite(void *pp, const WCHAR *name, int isTemp)
+static WRes IFileStream_OpenWrite(void *pp, const wchar_t *name, int isTemp)
 {
     IFileStream *pFileStream = (IFileStream *) pp;
     CSzFile *newFile = (CSzFile *)IAlloc_Alloc(pFileStream->mem_alctr, sizeof(CSzFile));
@@ -295,10 +295,11 @@ static WRes IFileStream_OpenWrite(void *pp, const WCHAR *name, int isTemp)
         pFileStream->tempFile = (void *)newFile;
     else
         pFileStream->realFile = (void *)newFile;
+    pFileStream->curFileName = name;
     return OutFile_OpenW(newFile, name, isTemp);
 }
 
-static WRes IFileStream_OpenRead(void *pp, const WCHAR *name, int isTemp)
+static WRes IFileStream_OpenRead(void *pp, const wchar_t *name, int isTemp)
 {
     IFileStream *pFileStream = (IFileStream *) pp;
     CSzFile *newFile = (CSzFile *)IAlloc_Alloc(pFileStream->mem_alctr, sizeof(CSzFile));
@@ -306,6 +307,7 @@ static WRes IFileStream_OpenRead(void *pp, const WCHAR *name, int isTemp)
         pFileStream->tempFile = (void *)newFile;
     else
         pFileStream->realFile = (void *)newFile;
+    pFileStream->curFileName = name;
     return InFile_OpenW(newFile, name, isTemp);
 }
 
