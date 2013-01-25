@@ -186,7 +186,7 @@ void SecToRead_CreateVTable(CSecToRead *p)
 #define F_WRITE(buf, size, isTemp)              {                                                       \
                                                     SizeT written = IFile->FileWrite(IFile, buf, size, isTemp); \
                                                     if (written != size) {                              \
-                                                        return SZ_ERROR_FAIL;                                           \
+                                                        return SZ_ERROR_WRITE;                                           \
                                                     }                                                   \
                                                     size = written;                                     \
                                                 }
@@ -213,14 +213,7 @@ static wchar_t * BaseName(wchar_t *path)
     }
     return path;
 }
-//static wchar_t * TempName(wchar_t *baseName)
-//{
-//    wchar_t *tempName = (wchar_t *) new wchar_t(255);
-//
-//    wcscpy(tempName, L"tempDir/");
-//    wcscat(tempName, baseName);
-//    return tempName;
-//}
+
 SizeT CountBytesToWrite(const UInt32 folderIndex, const CSzArEx *db, SizeT buf_size, pwr_st_t st)
 {
     const UInt64 startOffset = st->bytesWritten;
