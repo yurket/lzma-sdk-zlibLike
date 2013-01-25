@@ -2,7 +2,6 @@
 2010-03-11 : Igor Pavlov : Public domain */
 
 #include <string.h>
-#include <stdio.h>
 
 #include "Types.h"
 #include "7z.h"
@@ -176,20 +175,17 @@ void SecToRead_CreateVTable(CSecToRead *p)
 
 #define OPEN_FILE_OUT(fileName, isTemp)         if (IFile->OpenOutFile(IFile, fileName, isTemp))                              \
                                                 {                                                               \
-                                                    wprintf(L"can not open output file\n");    \
                                                     return SZ_ERROR_FAIL;                                        \
                                                 }        
 
 #define OPEN_FILE_IN(fileName, isTemp)          if (IFile->OpenInFile(IFile, fileName, isTemp))                          \
                                                 {                                                               \
-                                                    wprintf(L"can not open input file\n");    \
                                                     return SZ_ERROR_FAIL;                                       \
                                                 }
 
 #define F_WRITE(buf, size, isTemp)              {                                                       \
                                                     SizeT written = IFile->FileWrite(IFile, buf, size, isTemp); \
                                                     if (written != size) {                              \
-                                                        wprintf(L"error: not all data written! %d bytes", written);     \
                                                         return SZ_ERROR_FAIL;                                           \
                                                     }                                                   \
                                                     size = written;                                     \
@@ -197,7 +193,6 @@ void SecToRead_CreateVTable(CSecToRead *p)
 
 #define F_READ(buf, size, isTemp)               if (IFile->FileRead(IFile, buf, size, isTemp))                       \
                                                 {                                                       \
-                                                    wprintf(L"can not read file");                      \
                                                     res = SZ_ERROR_READ;                                \
                                                 }
 

@@ -2,17 +2,16 @@
 2010-11-02 : Igor Pavlov : Public domain */
 
 #include <string.h>
-#include <stdio.h>
 /* #define _7ZIP_PPMD_SUPPPORT */
 
 #include "7z.h"
+#include "7zStream.h"
 #include "Bcj2.h"
 #include "Bra.h"
 #include "CpuArch.h"
 #include "LzmaDec.h"
 #include "Lzma2Dec.h"
 
-#include "7zStream.h"
 #ifdef _7ZIP_PPMD_SUPPPORT
 #include "Ppmd7.h"
 #endif
@@ -124,7 +123,6 @@ static SRes SzDecodePpmd(CSzCoderInfo *coder, UInt64 inSize, ILookInStream *inSt
 
 #endif
 
-
 static SRes SzDecodeLzma(CSzCoderInfo *coder, UInt64 inSize, ILookInStream *inStream,
     Byte *outBuffer, SizeT outSize, ISzAlloc *allocMain)
 {
@@ -173,7 +171,73 @@ static SRes SzDecodeLzma(CSzCoderInfo *coder, UInt64 inSize, ILookInStream *inSt
   return res;
 }
 
+static SRes SzDecodeLzma2(CSzCoderInfo *coder, UInt64 inSize, ILookInStream *inStream,
+                          Byte *outBuffer, SizeT outSize, ISzAlloc *allocMain)
+{
+    CLzma2Dec state;
+    SRes res = SZ_OK;
 
+    Lzma2Dec_Construct(&state);
+    if (coder->Props.size != 1)
+        return SZ_ERROR_DATA;
+    RINOK(Lzma2Dec_AllocateProbs(&state, coder->Props.data[0], allocMain));
+    state.decoder.dic = outBuffer;
+    state.decoder.dicBufSize = outSize;
+    Lzma2Dec_Init(&state);
+
+    for (;;)
+    {
+        Byte *inBuf = NULL;
+        size_t lookahead = (1 << 18);
+        if (lookahead > inSize)         // inSize = packed size 1 322 532
+            lookahead = (size_t)inSize;
+        res = inStream->Look((void *)inStream, (const void **)&inBuf, &lookahead);      // lookahead = 16384
+        if (res != SZ_OK)
+            break;
+
+        {
+            SizeT inProcessed = (SizeT)lookahead, dicPos = state.decoder.dicPos;
+            ELzmaStatus status;
+            res = Lzma2Dec_DecodeToDic(&state, outSize, inBuf, &inProcessed, LZMA_FINISH_END, &status);
+            lookahead -= inProcessed;
+            inSize -= inProcessed;
+            if (res != SZ_OK)
+                break;
+            if (state.decoder.dicPos == state.decoder.dicBufSize || (inProcessed == 0 && dicPos == state.decoder.dicPos))
+            {
+                if (state.decoder.dicBufSize != outSize || lookahead != 0 ||
+                    (status != LZMA_STATUS_FINISHED_WITH_MARK))
+                    res = SZ_ERROR_DATA;
+                break;
+            }
+            res = inStream->Skip((void *)inStream, inProcessed);
+            if (res != SZ_OK)
+                break;
+        }
+    }
+
+    Lzma2Dec_FreeProbs(&state, allocMain);
+    return res;
+}
+
+static SRes SzDecodeCopy(UInt64 inSize, ILookInStream *inStream, Byte *outBuffer)
+{
+    while (inSize > 0)
+    {
+        void *inBuf;
+        size_t curSize = (1 << 18);
+        if (curSize > inSize)
+            curSize = (size_t)inSize;
+        RINOK(inStream->Look((void *)inStream, (const void **)&inBuf, &curSize));
+        if (curSize == 0)
+            return SZ_ERROR_INPUT_EOF;
+        memcpy(outBuffer, inBuf, curSize);
+        outBuffer += curSize;
+        inSize -= curSize;
+        RINOK(inStream->Skip((void *)inStream, curSize));
+    }
+    return SZ_OK;
+}
 
 // ===================================== defines and macroses ========================================
 
@@ -200,7 +264,7 @@ static SRes SzDecodeLzma(CSzCoderInfo *coder, UInt64 inSize, ILookInStream *inSt
                                         FREE_BUF(out_buf);
 
 // ===================================================================================================
-#define RETAIN_BUF_SIZE            4     //  4 is LookAhead in x86_Convert(0
+#define RETAIN_BUF_SIZE            4     //  4 is LookAhead in x86_Convert()
 #define BCJ_state_init(state)           {                                                                                       \
                                             state.ip = 0;                                                                       \
                                             state.x86_state = 0;                                                                \
@@ -236,7 +300,6 @@ static SizeT DecodeBCJ(Byte *data, SizeT *size, BCJ_state *st, Bool last_time)
     retain_bytes = *size - processed;
     if (retain_bytes > RETAIN_BUF_SIZE)
     {
-        printf("emm.. tut kak by bufera ne hvataet, naprimer...\n");
         return SZ_ERROR_MEM;
     }
     memcpy(st->retain_buf, (data + offset) + processed, retain_bytes);
@@ -293,7 +356,6 @@ static SRes SzDecodeLzmaToFileWithBuf(const UInt32 folderIndex, CSzCoderInfo *co
         if (in_buf_size == 0 || res != SZ_OK)
         {
             StopDecoding = True;
-            printf("something bad happened =( \n");
             return SZ_ERROR_FAIL;
         }
         out_size += out_buf_size;
@@ -325,7 +387,6 @@ static SRes SzDecodeLzmaToFileWithBuf(const UInt32 folderIndex, CSzCoderInfo *co
         }   
         
      }
-    printf("I'm ALIVE! =) I unpacked %d(from %d) bytes and %d bytes left in input buffer\n", out_size, outSize, bytes_left);
 
     FREE_BUFS(myInBufBitch, myOutBufBitch);
     LzmaDec_Free(&state, allocMain);
@@ -338,7 +399,7 @@ static SRes SzDecodeLzma2ToFileWithBuf(const UInt32 folderIndex, CSzCoderInfo *c
 {
     Byte *myInBufBitch = NULL;
     Byte *myOutBufBitch = NULL;
-
+    SRes res = 0;
     CLzma2Dec state;
     Lzma2Dec_Construct(&state);
     Lzma2Dec_Allocate(&state, coder->Props.data[0], allocMain);
@@ -372,11 +433,10 @@ static SRes SzDecodeLzma2ToFileWithBuf(const UInt32 folderIndex, CSzCoderInfo *c
             finishMode = LZMA_FINISH_END;
 
         }
-        Lzma2Dec_DecodeToBuf(&state, myOutBufBitch, &out_buf_size, myInBufBitch + in_offset, &in_buf_size, finishMode, &status);
-        if (in_buf_size == 0)
+        res = Lzma2Dec_DecodeToBuf(&state, myOutBufBitch, &out_buf_size, myInBufBitch + in_offset, &in_buf_size, finishMode, &status);
+        if (in_buf_size == 0 || res != SZ_OK)
         {
             StopDecoding = True;
-            printf("lzma2 decode: something bad happened =( \n");
             return SZ_ERROR_FAIL;
         }
         out_size += out_buf_size;
@@ -406,7 +466,7 @@ static SRes SzDecodeLzma2ToFileWithBuf(const UInt32 folderIndex, CSzCoderInfo *c
                 break;
         }   
     }
-    printf("lzma2: I'm ALIVE! =) I unpacked %d(from %d) bytes and %d bytes left in input buffer\n", out_size, outSize, bytes_left);
+
     FREE_BUFS(myInBufBitch, myOutBufBitch);
     Lzma2Dec_Free(&state, allocMain);
     return SZ_OK;
@@ -431,78 +491,9 @@ static SRes SzDecodeCopyToFileWithBuf(const UInt32 folderIndex, const CSzArEx *d
         RINOK(WriteStream(IFile, folderIndex, db, buf, bytes_read, &st));
         out_size += bytes_read;
     }
-    printf("I'm ALIVE! =) I unpacked %d(from %d) bytes\n", out_size, outSize);
+
     FREE_BUF(buf);
     return SZ_OK;
-}
-
-
-static SRes SzDecodeLzma2(CSzCoderInfo *coder, UInt64 inSize, ILookInStream *inStream,
-    Byte *outBuffer, SizeT outSize, ISzAlloc *allocMain)
-{
-  CLzma2Dec state;
-  SRes res = SZ_OK;
-
-  Lzma2Dec_Construct(&state);
-  if (coder->Props.size != 1)
-    return SZ_ERROR_DATA;
-  RINOK(Lzma2Dec_AllocateProbs(&state, coder->Props.data[0], allocMain));
-  state.decoder.dic = outBuffer;
-  state.decoder.dicBufSize = outSize;
-  Lzma2Dec_Init(&state);
-
-  for (;;)
-  {
-    Byte *inBuf = NULL;
-    size_t lookahead = (1 << 18);
-    if (lookahead > inSize)         // inSize = packed size 1 322 532
-      lookahead = (size_t)inSize;
-    res = inStream->Look((void *)inStream, (const void **)&inBuf, &lookahead);      // lookahead = 16384
-    if (res != SZ_OK)
-      break;
-
-    {
-      SizeT inProcessed = (SizeT)lookahead, dicPos = state.decoder.dicPos;
-      ELzmaStatus status;
-      res = Lzma2Dec_DecodeToDic(&state, outSize, inBuf, &inProcessed, LZMA_FINISH_END, &status);
-      lookahead -= inProcessed;
-      inSize -= inProcessed;
-      if (res != SZ_OK)
-        break;
-      if (state.decoder.dicPos == state.decoder.dicBufSize || (inProcessed == 0 && dicPos == state.decoder.dicPos))
-      {
-        if (state.decoder.dicBufSize != outSize || lookahead != 0 ||
-            (status != LZMA_STATUS_FINISHED_WITH_MARK))
-          res = SZ_ERROR_DATA;
-        break;
-      }
-      res = inStream->Skip((void *)inStream, inProcessed);
-      if (res != SZ_OK)
-        break;
-    }
-  }
-
-  Lzma2Dec_FreeProbs(&state, allocMain);
-  return res;
-}
-
-static SRes SzDecodeCopy(UInt64 inSize, ILookInStream *inStream, Byte *outBuffer)
-{
-  while (inSize > 0)
-  {
-    void *inBuf;
-    size_t curSize = (1 << 18);
-    if (curSize > inSize)
-      curSize = (size_t)inSize;
-    RINOK(inStream->Look((void *)inStream, (const void **)&inBuf, &curSize));
-    if (curSize == 0)
-      return SZ_ERROR_INPUT_EOF;
-    memcpy(outBuffer, inBuf, curSize);
-    outBuffer += curSize;
-    inSize -= curSize;
-    RINOK(inStream->Skip((void *)inStream, curSize));
-  }
-  return SZ_OK;
 }
 
 
@@ -723,23 +714,20 @@ static SRes SzFolder_Decode2(const CSzFolder *folder, const UInt64 *packSizes,
   return SZ_OK;
 }
 
-
 SRes SzFolder_Decode(const CSzFolder *folder, const UInt64 *packSizes,
     ILookInStream *inStream, UInt64 startPos,
     Byte *outBuffer, size_t outSize, ISzAlloc *allocMain)
 {
-  Byte *tempBuf[3] = { 0, 0, 0};
-  int i;
-  SRes res = SzFolder_Decode2(folder, packSizes, inStream, startPos,
-      outBuffer, (SizeT)outSize, allocMain, tempBuf);
-  for (i = 0; i < 3; i++)
-    IAlloc_Free(allocMain, tempBuf[i]);
-  return res;
+    Byte *tempBuf[3] = { 0, 0, 0};
+    int i;
+    SRes res = SzFolder_Decode2(folder, packSizes, inStream, startPos,
+        outBuffer, (SizeT)outSize, allocMain, tempBuf);
+    for (i = 0; i < 3; i++)
+        IAlloc_Free(allocMain, tempBuf[i]);
+    return res;
 }
 
-
-
-static Bool DetectFilter(const CSzFolder *folder)
+static Bool IsFilterPresent(const CSzFolder *folder)
 {
     if (folder->NumCoders == 2 && folder->Coders[1].MethodID == k_BCJ )
         return True;
@@ -842,7 +830,7 @@ static SRes SzFolder_Decode2ToFile(const CSzFolder *folder, const UInt32 folderI
     for (ci = 0; ci < folder->NumCoders; ci++)
     {
         CSzCoderInfo *coder = &folder->Coders[ci];
-        const Bool FilterPresent = DetectFilter(folder);
+        const Bool FilterPresent = IsFilterPresent(folder);
         if (IS_MAIN_METHOD((UInt32)coder->MethodID))
         {
             UInt32 si = 0;
@@ -929,19 +917,21 @@ static SRes SzFolder_Decode2ToFile(const CSzFolder *folder, const UInt32 folderI
         }
         else if (coder->MethodID == k_BCJ2)
         {
-            printf("BCJ2 filter in coder # %d\n", ci+1);
+            SRes res;
             UInt64 offset = GetSum(packSizes, 1);
             UInt64 s3Size = packSizes[1];
-            SRes res;
             if (ci != 3)
                 return SZ_ERROR_UNSUPPORTED;
+
             RINOK(LookInStream_SeekTo(inStream, startPos + offset));
+
             tempSizes[2] = (SizeT)s3Size;
             if (tempSizes[2] != s3Size)
                 return SZ_ERROR_MEM;
             tempBuf[2] = (Byte *)IAlloc_Alloc(allocMain, tempSizes[2]);
             if (tempBuf[2] == 0 && tempSizes[2] != 0)
                 return SZ_ERROR_MEM;
+
             res = SzDecodeCopy(s3Size, inStream, tempBuf[2]);
             RINOK(res)
             res = ApplyBCJ2(IFile, total_out_size, folderIndex, db, allocMain, tempBuf, tempSizes);
@@ -949,9 +939,9 @@ static SRes SzFolder_Decode2ToFile(const CSzFolder *folder, const UInt32 folderI
         }
         else    // BCJ
         {
-            printf("BCJ filter in coder # %d\n", ci+1);
             if (ci != 1)
                 return SZ_ERROR_UNSUPPORTED;
+
             ApplyBCJ(IFile, outSizeCur, folderIndex, db, allocMain);
         }
     }
@@ -966,7 +956,7 @@ SRes SzFolder_DecodeToFile(const CSzFolder *folder, const UInt32 folderIndex, co
     Byte *tempBuf[3] = { 0, 0, 0};
     int i;
     SRes res = SzFolder_Decode2ToFile(folder, folderIndex, packSizes, inStream, IFile, 
-                      db, startPos,(SizeT)outSize, allocMain, tempBuf);
+        db, startPos,(SizeT)outSize, allocMain, tempBuf);
     for (i = 0; i < 3; i++)
         IAlloc_Free(allocMain, tempBuf[i]);
     return res;
