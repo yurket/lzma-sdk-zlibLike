@@ -1404,17 +1404,6 @@ SRes SzArEx_Extract(
 // ======================================================================================================================
 SRes ExtractAllFiles( const CSzArEx *p, ILookInStream *inStream, IFileStream  *IFile, ISzAlloc *allocMain, ISzAlloc *allocTemp)
 {
-    //*offset = 0;
-    //*outSizeProcessed = 0;
-    //if (folderIndex == (UInt32)-1)
-    //{
-    //    IAlloc_Free(allocMain, *outBuffer);
-    //    *blockIndex = folderIndex;
-    //    *outBuffer = 0;
-    //    *outBufferSize = 0;
-    //    return SZ_OK;
-    //}
-    //UInt32 folderIndex = p->FileIndexToFolderIndexMap[fileIndex];
     SRes res = SZ_OK;
     for (UInt32 folderIndex = 0; folderIndex < p->db.NumFolders; folderIndex++)
     {
@@ -1426,38 +1415,11 @@ SRes ExtractAllFiles( const CSzArEx *p, ILookInStream *inStream, IFileStream  *I
         if (unpackSize != unpackSizeSpec)
             return SZ_ERROR_MEM;
 
-        //*blockIndex = folderIndex;
-
         RINOK(LookInStream_SeekTo(inStream, startOffset));
 
         res = SzFolder_DecodeToFile(folder, folderIndex,
             p->db.PackSizes + p->FolderStartPackStreamIndex[folderIndex],       // FolderStartPackStreamIndex - щито о_О?
             inStream, IFile, p, startOffset, unpackSize, allocTemp);
     }
-
-
-
-
-    //if (res == SZ_OK)
-    //{
-    //    if (folder->UnpackCRCDefined)
-    //    {
-    //        if (CrcCalc(*outBuffer, unpackSize) != folder->UnpackCRC)
-    //            res = SZ_ERROR_CRC;
-    //    }
-    //}
-    //if (res == SZ_OK)
-    //{
-    //    UInt32 i;
-    //    CSzFileItem *fileItem = p->db.Files + fileIndex;
-    //    *offset = 0;
-    //    for (i = p->FolderStartFileIndex[folderIndex]; i < fileIndex; i++)
-    //        *offset += (UInt32)p->db.Files[i].Size;
-    //    *outSizeProcessed = (size_t)fileItem->Size;
-    //    if (*offset + *outSizeProcessed > *outBufferSize)
-    //        return SZ_ERROR_FAIL;
-    //    if (fileItem->CrcDefined && CrcCalc(*outBuffer + *offset, *outSizeProcessed) != fileItem->Crc)
-    //        res = SZ_ERROR_CRC;
-    //}
     return res;
 }
