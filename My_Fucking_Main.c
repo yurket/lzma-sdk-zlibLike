@@ -20,7 +20,9 @@ static int TestSignatureCandidate(Byte *testBytes)
 
 static char *LetsFind7z(char *fileName)
 {
+    int status = 0;
     FILE *fin = fopen(fileName, "rb");
+    long in_file_size = 0, cur_pos;
     FILE *fout = fopen("7zpart.7z", "wb");
     Byte buf[k7zSignatureSize];
     Byte *write_buf = (Byte *) new Byte[BUF_SIZE];
@@ -30,6 +32,10 @@ static char *LetsFind7z(char *fileName)
         return NULL;
     }
 
+    fseek(fin, 0, SEEK_END);
+    in_file_size = ftell(fin);
+    rewind(fin);
+
     while (True)
     {
         fread(buf, sizeof(Byte), k7zSignatureSize, fin);
@@ -38,7 +44,13 @@ static char *LetsFind7z(char *fileName)
             fseek(fin, -((int)k7zSignatureSize), SEEK_CUR);
             break;
         }
-        fseek(fin, -((int)k7zSignatureSize) + 1, SEEK_CUR);
+        status = fseek(fin, -((int)k7zSignatureSize) + 1, SEEK_CUR);
+        cur_pos = ftell(fin);
+        if (status || cur_pos >= (in_file_size - k7zSignatureSize))
+        {
+            printf("Can't find s7 signature -> shutting down\n");
+            return NULL;
+        }
     }
     UInt32 bytes_to_write = BUF_SIZE, read;
     while(True)
