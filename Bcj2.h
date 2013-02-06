@@ -80,7 +80,6 @@ typedef struct Bcj2_dec_state
                                             }                                                               \
                                         };                          \
 
-
 int Bcj2_DecodeToFileWithBufs(
                 const Byte *buf0, SizeT size0,
                 Byte *buf1, SizeT *size1,

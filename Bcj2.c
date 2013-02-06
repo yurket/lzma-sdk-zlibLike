@@ -126,11 +126,6 @@ int Bcj2_Decode(
   return (outPos == outSize) ? SZ_OK : SZ_ERROR_DATA;
 }
 
-
-
-
-
-
 int Bcj2_DecodeToFileWithBufs(
                 const Byte *buf0, SizeT size0,
                 Byte *buf1, SizeT *size1,
