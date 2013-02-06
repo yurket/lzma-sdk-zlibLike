@@ -130,7 +130,7 @@ int main(int argc, char *argv[])
     }
 
 
-    res = ExtractAllFiles(&db, &lookStream.s, &IFile, &allocImp, &allocTempImp);
+    res = ExtractAllFiles(&db, &lookStream.s, &IFile, &allocImp);
     File_Close(&archiveStream.file);
     Cleanup(&IFile);
     system("pause");

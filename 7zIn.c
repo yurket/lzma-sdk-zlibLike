@@ -1402,15 +1402,15 @@ SRes SzArEx_Extract(
 
 
 // ======================================================================================================================
-SRes ExtractAllFiles( const CSzArEx *p, ILookInStream *inStream, IFileStream  *IFile, ISzAlloc *allocMain, ISzAlloc *allocTemp)
+SRes ExtractAllFiles( const CSzArEx *p, ILookInStream *inStream, IFileStream  *IFile, ISzAlloc *allocMain)
 {
     SRes res = SZ_OK;
     for (UInt32 folderIndex = 0; folderIndex < p->db.NumFolders; folderIndex++)
     {
         CSzFolder *folder = p->db.Folders + folderIndex;
-        UInt64 unpackSizeSpec = SzFolder_GetUnpackSize(folder);             // returns UnpackedSizes 6 086 757
+        UInt64 unpackSizeSpec = SzFolder_GetUnpackSize(folder);
         size_t unpackSize = (size_t)unpackSizeSpec;
-        UInt64 startOffset = SzArEx_GetFolderStreamPos(p, folderIndex, 0);  // returns 32
+        UInt64 startOffset = SzArEx_GetFolderStreamPos(p, folderIndex, 0);
 
         if (unpackSize != unpackSizeSpec)
             return SZ_ERROR_MEM;
@@ -1418,8 +1418,8 @@ SRes ExtractAllFiles( const CSzArEx *p, ILookInStream *inStream, IFileStream  *I
         RINOK(LookInStream_SeekTo(inStream, startOffset));
 
         res = SzFolder_DecodeToFile(folder, folderIndex,
-            p->db.PackSizes + p->FolderStartPackStreamIndex[folderIndex],       // FolderStartPackStreamIndex - щито о_О?
-            inStream, IFile, p, startOffset, unpackSize, allocTemp);
+            p->db.PackSizes + p->FolderStartPackStreamIndex[folderIndex],
+            inStream, IFile, p, startOffset, unpackSize, allocMain);
     }
     return res;
 }
