@@ -1405,7 +1405,8 @@ SRes SzArEx_Extract(
 SRes ExtractAllFiles( const CSzArEx *p, ILookInStream *inStream, IFileStream  *IFile, ISzAlloc *allocMain)
 {
     SRes res = SZ_OK;
-    for (UInt32 folderIndex = 0; folderIndex < p->db.NumFolders; folderIndex++)
+    UInt32 folderIndex;
+    for (folderIndex = 0; folderIndex < p->db.NumFolders; folderIndex++)
     {
         CSzFolder *folder = p->db.Folders + folderIndex;
         UInt64 unpackSizeSpec = SzFolder_GetUnpackSize(folder);
