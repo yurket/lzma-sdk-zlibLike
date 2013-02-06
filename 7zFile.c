@@ -348,16 +348,18 @@ static void IFileStream_CloseFile(void *pp, int isTemp)
 
 static SRes FileDelete(const void *name)
 {
-    if (name == NULL)
-        return SZ_ERROR_FAIL;
 #ifdef _WIN32
     LPCWSTR fileName = (LPCWSTR)name;
+    if (name == NULL)
+        return SZ_ERROR_FAIL;
     if (DeleteFileW(fileName) == 0)
         return GetLastError();
     else 
         return SZ_OK;
 #else
     char *fileName = (char *)name;
+    if (name == NULL)
+        return SZ_ERROR_FAIL;
     if( remove(fileName) != 0 )
         perror( "Error deleting file" );
     else
