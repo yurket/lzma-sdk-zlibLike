@@ -2,6 +2,7 @@
 2009-11-24 : Igor Pavlov : Public domain */
 
 #include "7zFile.h"
+
 #ifndef USE_WINDOWS_FILE
 
 #ifndef UNDER_CE
@@ -34,7 +35,7 @@ void File_Construct(CSzFile *p)
 }
 
 #if !defined(UNDER_CE) || !defined(USE_WINDOWS_FILE)
-WRes File_Open(CSzFile *p, const char *name, int writeMode)
+static WRes File_Open(CSzFile *p, const char *name, int writeMode)
 {
   #ifdef USE_WINDOWS_FILE
   p->handle = CreateFileA(name,
@@ -85,7 +86,7 @@ WRes File_Close(CSzFile *p)
     p->handle = INVALID_HANDLE_VALUE;
   }
   #else
-  if (p->file != NULL);
+  if (p->file != NULL)
   {
     int res = fclose(p->file);
     if (res != 0)
