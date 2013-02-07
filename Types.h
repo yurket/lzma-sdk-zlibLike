@@ -234,18 +234,18 @@ typedef struct
 #define IAlloc_Free(p, a) (p)->Free((p), a)
 
 /*    interface to deal with files    */
-struct IFileStream {
-    WRes (*OpenOutFile)(IFileStream *p, const WCHAR *name, int isTemp);
-    WRes (*OpenInFile)(IFileStream *p, const WCHAR *name, int isTemp);
-    size_t (*FileWrite)(IFileStream *p, const void *buf, size_t size, int isTemp);
-    SRes (*FileRead)(IFileStream *p, void *buf, size_t *size, int isTemp);
-    void (*FileClose)(IFileStream *p, int isTemp);
-    void (*FileRemove) (IFileStream *p, void *name);
+typedef struct IFileStream_t {
+    WRes (*OpenOutFile)(struct IFileStream_t *p, const WCHAR *name, int isTemp);
+    WRes (*OpenInFile)(struct IFileStream_t *p, const WCHAR *name, int isTemp);
+    size_t (*FileWrite)(struct IFileStream_t *p, const void *buf, size_t size, int isTemp);
+    SRes (*FileRead)(struct IFileStream_t *p, void *buf, size_t *size, int isTemp);
+    void (*FileClose)(struct IFileStream_t *p, int isTemp);
+    void (*FileRemove) (struct IFileStream_t *p, void *name);
     void *tempFile;
     void *realFile;
     const wchar_t *curFileName;
     ISzAlloc *mem_alctr;
-};
+} IFileStream;
 
 void IFileStream_CreateVTable(IFileStream *p, ISzAlloc *);
 #ifdef _WIN32
