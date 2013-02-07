@@ -235,8 +235,8 @@ typedef struct
 
 /*    interface to deal with files    */
 typedef struct IFileStream_t {
-    WRes (*OpenOutFile)(struct IFileStream_t *p, const WCHAR *name, int isTemp);
-    WRes (*OpenInFile)(struct IFileStream_t *p, const WCHAR *name, int isTemp);
+    WRes (*OpenOutFile)(struct IFileStream_t *p, const wchar_t *name, int isTemp);
+    WRes (*OpenInFile)(struct IFileStream_t *p, const wchar_t *name, int isTemp);
     size_t (*FileWrite)(struct IFileStream_t *p, const void *buf, size_t size, int isTemp);
     SRes (*FileRead)(struct IFileStream_t *p, void *buf, size_t *size, int isTemp);
     void (*FileClose)(struct IFileStream_t *p, int isTemp);
