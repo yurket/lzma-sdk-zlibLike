@@ -288,9 +288,8 @@ void FileOutStream_CreateVTable(CFileOutStream *p)
 
 
 /* ------------ IFileStream ------------ */
-static WRes IFileStream_OpenWrite(void *pp, const wchar_t *name, int isTemp)
+static WRes IFileStream_OpenWrite(IFileStream *pFileStream, const wchar_t *name, int isTemp)
 {
-    IFileStream *pFileStream = (IFileStream *) pp;
     CSzFile *newFile = (CSzFile *)IAlloc_Alloc(pFileStream->mem_alctr, sizeof(CSzFile));
     if (isTemp)
         pFileStream->tempFile = (void *)newFile;
@@ -300,9 +299,8 @@ static WRes IFileStream_OpenWrite(void *pp, const wchar_t *name, int isTemp)
     return OutFile_OpenW(newFile, name, isTemp);
 }
 
-static WRes IFileStream_OpenRead(void *pp, const wchar_t *name, int isTemp)
+static WRes IFileStream_OpenRead(IFileStream *pFileStream, const wchar_t *name, int isTemp)
 {
-    IFileStream *pFileStream = (IFileStream *) pp;
     CSzFile *newFile = (CSzFile *)IAlloc_Alloc(pFileStream->mem_alctr, sizeof(CSzFile));
     if (isTemp)
         pFileStream->tempFile = (void *)newFile;
@@ -312,9 +310,8 @@ static WRes IFileStream_OpenRead(void *pp, const wchar_t *name, int isTemp)
     return InFile_OpenW(newFile, name, isTemp);
 }
 
-static size_t IFileStream_Write(void *pp, const void *data, size_t size, int isTemp)
+static size_t IFileStream_Write(IFileStream *pFileStream, const void *data, size_t size, int isTemp)
 {
-    IFileStream *pFileStream = (IFileStream *) pp;
     CSzFile *p;
     if (isTemp)
         p = (CSzFile *)pFileStream->tempFile;
@@ -323,9 +320,8 @@ static size_t IFileStream_Write(void *pp, const void *data, size_t size, int isT
     File_Write(p, data, &size);
     return size;
 }
-static SRes IFileStream_Read(void *pp, void *data, size_t *size, int isTemp)
+static SRes IFileStream_Read(IFileStream *pFileStream, void *data, size_t *size, int isTemp)
 {
-    IFileStream *pFileStream = (IFileStream *) pp;
     CSzFile *p;
     if (isTemp)
         p = (CSzFile *)pFileStream->tempFile;
@@ -333,9 +329,8 @@ static SRes IFileStream_Read(void *pp, void *data, size_t *size, int isTemp)
         p = (CSzFile *)pFileStream->realFile;
     return (File_Read(p, data, size) == 0) ? SZ_OK : SZ_ERROR_READ;
 }
-static void IFileStream_CloseFile(void *pp, int isTemp)
+static void IFileStream_CloseFile(IFileStream *pFileStream, int isTemp)
 {
-    IFileStream *pFileStream = (IFileStream *) pp;
     CSzFile *p;
     if (isTemp)
         p = (CSzFile *)pFileStream->tempFile;
@@ -346,7 +341,7 @@ static void IFileStream_CloseFile(void *pp, int isTemp)
     p = NULL;
 }
 
-static SRes FileDelete(const void *name)
+static SRes FileDelete(IFileStream *pFileStream, void *name)
 {
 #ifdef _WIN32
     LPCWSTR fileName = (LPCWSTR)name;
@@ -354,7 +349,7 @@ static SRes FileDelete(const void *name)
         return SZ_ERROR_FAIL;
     if (DeleteFileW(fileName) == 0)
         return GetLastError();
-    else 
+    else
         return SZ_OK;
 #else
     char *fileName = (char *)name;
@@ -367,9 +362,9 @@ static SRes FileDelete(const void *name)
 #endif
 }
 
-static void IFileStream_DeleteFile(const void *pp)
+static void IFileStream_DeleteFile(IFileStream *pp, void *name)
 {
-    FileDelete(pp);
+    FileDelete(pp, name);
 }
 void IFileStream_CreateVTable(IFileStream *p, ISzAlloc *alctr)
 {

@@ -71,8 +71,8 @@ static char *LetsFind7z(char *fileName)
 
 static void Cleanup(IFileStream *IFile)
 {
-    IFile->FileRemove(L"temp.dat");
-    IFile->FileRemove(L"7zpart.7z");
+    IFile->FileRemove(IFile, L"temp.dat");
+    IFile->FileRemove(IFile, L"7zpart.7z");
 }
 
 int main(int argc, char *argv[])
