@@ -128,7 +128,7 @@ int main(int argc, char *argv[])
         wprintf(L"%-2d: %-37s - %s, unpacked: %ld\n", 
             i, db.FileNames.data + (*pOffsets++)*sizeof(wchar_t) ,file->IsDir?L"dir":L"file", file->Size);
     }
-
+    printf("====================================================\n");
 
     res = ExtractAllFiles(&db, &lookStream.s, &IFile, &allocImp);
     File_Close(&archiveStream.file);
