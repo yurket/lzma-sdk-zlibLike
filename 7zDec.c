@@ -775,7 +775,11 @@ static SRes ApplyBCJ(IFileStream  *IFile, SizeT total_unpack_size, const UInt32 
         SizeT retain_offset = 0;
         Bool LastBuf = False;
         RINOK(ReadTempStream(IFile, decodeBuf + RETAIN_BUF_SIZE, &bytes_read, &r_st));
-        if (bytes_read < IN_BUF_SIZE)
+
+        if (
+            (total_unpack_size - bytes_read) == 0  ||                           // иногда этого условия недостаточно (разобраться!)
+            (total_unpack_size - bytes_read - RETAIN_BUF_SIZE) == 0
+            )
             LastBuf = True;
         processed = DecodeBCJ(decodeBuf, &bytes_read, &bcj1_st, LastBuf);
 
