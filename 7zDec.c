@@ -517,25 +517,34 @@ struct BCJ_state
     Bool FirstBuffer;
 };
 
+// DecodeBCJ() - apply BCJ filter on single buffer
+// (..)
+// st - info about filter applying process,
+// last_time - tells if it is last buffer to apply filter on.
+
+//
+//
+
 static SizeT DecodeBCJ(Byte *data, SizeT *size, BCJ_state *st, Bool last_time)
 {
     SizeT offset;
     SizeT processed = 0, retain_bytes;
     if (st->retain_buf_size)
-        memcpy(data, st->retain_buf, st->retain_buf_size);        // copy 4 bytes in the beginning of buffer
+        memcpy(data, st->retain_buf, st->retain_buf_size);        // copy 4 bytes in the beginning of buffer. (4 bytes remained from prev. call)
     *size += st->retain_buf_size;
     offset = (st->FirstBuffer) ? RETAIN_BUF_SIZE : 0;
     processed = x86_Convert(data + offset, *size, st->ip, &st->x86_state, DECODING);
     st->ip += processed;
-    retain_bytes = *size - processed;
-    if (retain_bytes > RETAIN_BUF_SIZE)
+    retain_bytes = *size - processed;                           // retain_bytes usually 4 bytes, because x86_Convert() don't even look on
+    if (retain_bytes > RETAIN_BUF_SIZE)                         //    last 4 bytes ('jmp addr' in asm code is 5 bytes long)
     {
         return SZ_ERROR_MEM;
     }
     memcpy(st->retain_buf, (data + offset) + processed, retain_bytes);
     st->retain_buf_size = retain_bytes;
+
     if (last_time)
-        processed += retain_bytes;
+        processed += retain_bytes;      // don't forget to add that 4 bytes.
     *size = processed;
     return processed;
 }
@@ -735,6 +744,18 @@ static Bool IsFilterPresent(const CSzFolder *folder)
     else
         return 0;
 }
+
+
+//  ApplyBCJ - функция наложения BJC фильтра к предварительно распакованным данным
+//  IFile- интерфейс для работы с файлами,
+//  total_unpack_size - конечный размер всех распакованных файлов (с наложенным фильтром) в данном "фолдере"
+//      (или стриме, на знаю как лучше называть),
+//  folderIndex - индекс текущего фолдера.
+
+// Cуть BCJ фильтра заключается в том, что он изменяет адреса в коде сжимаемого PE-шника, чтобы добиться лучшего
+// процента сжатия. Поэтому после распаковки lzma стрима у нас получается PE-шник с невалидными адресами.
+// Следовательно нужно "пройтись" по стриму, и вернуть адреса к прежнему виду.
+// Размер входных данных = размеру выходных, так что размер буфера можно брать любой.
 static SRes ApplyBCJ(IFileStream  *IFile, SizeT total_unpack_size, const UInt32 folderIndex, const CSzArEx *db, ISzAlloc *allocMain)
 {
     Byte *decodeBuf = NULL;
@@ -760,7 +781,7 @@ static SRes ApplyBCJ(IFileStream  *IFile, SizeT total_unpack_size, const UInt32 
 
         if (processed == 0)
             break;
-        if (bcj1_st.FirstBuffer)               // first out buffer should strart from offset RETAIN_BUF_SIZE
+        if (bcj1_st.FirstBuffer)               // first out buffer should start from offset RETAIN_BUF_SIZE
         {
             retain_offset = RETAIN_BUF_SIZE;
             bcj1_st.FirstBuffer = False;
