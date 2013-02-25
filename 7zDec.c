@@ -470,7 +470,6 @@ SRes SzFolder_Decode(const CSzFolder *folder, const UInt64 *packSizes,
 }
 
 // ===================================== defines and macroses ========================================
-
 #define IN_BUF_SIZE     (1 << 19)
 #define OUT_BUF_SIZE    (1 << 20)
 #define COPY_BUF_SIZE   (1 << 21)       // lzma_copy method
@@ -479,35 +478,45 @@ SRes SzFolder_Decode(const CSzFolder *folder, const UInt64 *packSizes,
 #define DECODING        0
 #define ENCODING        1
 
-#define ALLOCATE_BUF(buf, size)          {                                                      \
+#define ALLOCATE_BUF(buf, size)                         \
+do {                                                    \
     buf = (Byte *)IAlloc_Alloc(allocMain, size);        \
     if (buf == NULL)  return SZ_ERROR_MEM;              \
-}                                                       
+} while (0)
 
-#define ALLOCATE_BUFS(in_buf, in_size, out_buf, out_size)   ALLOCATE_BUF(in_buf, in_size);              \
-    ALLOCATE_BUF(out_buf, out_size);
+#define ALLOCATE_BUFS(in_buf, in_size, out_buf, out_size) \
+do {                                                      \
+    ALLOCATE_BUF(in_buf, in_size);                        \
+    ALLOCATE_BUF(out_buf, out_size);                      \
+} while (0)
 
-#define FREE_BUF(buf)                    IAlloc_Free(allocMain, buf);             \
-    buf = NULL;        
+#define FREE_BUF(buf)                                     \
+do {                                                      \
+    IAlloc_Free(allocMain, buf);                          \
+    buf = NULL;                                           \
+} while (0)
 
-#define FREE_BUFS(in_buf, out_buf)      FREE_BUF(in_buf);           \
-    FREE_BUF(out_buf);
+#define FREE_BUFS(in_buf, out_buf)                        \
+do {                                                      \
+    FREE_BUF(in_buf);                                     \
+    FREE_BUF(out_buf);                                    \
+} while (0)
 
 // ===================================================================================================
 #define RETAIN_BUF_SIZE            4     //  4 is LookAhead in x86_Convert()
-#define BCJ_state_init(state)           {                                                                                       \
+
+#define BCJ_state_init(state)          do {                                             \
     state.ip = 0;                                                                       \
     state.x86_state = 0;                                                                \
     state.retain_buf = (Byte *)IAlloc_Alloc(allocMain, RETAIN_BUF_SIZE);            \
     state.retain_buf_size = 0;                                                          \
     state.FirstBuffer = True;                                                           \
-}
+} while (0)
+
 #define BCJ_state_free(state)           FREE_BUF(state.retain_buf);
 
-//#define BCJ_free_state(state)           IAlloc_Free(allocMain, state.decode_buf);  \
+//#define BCJ_free_state(state)           IAlloc_Free(allocMain, state.decode_buf);
 //                                        state.decode_buf = NULL;
-
-
 struct BCJ_state
 {
     UInt32 ip;

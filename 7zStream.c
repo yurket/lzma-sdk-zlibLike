@@ -173,27 +173,27 @@ void SecToRead_CreateVTable(CSecToRead *p)
 
 // ===============================================================================================================
 
-#define OPEN_FILE_OUT(fileName, isTemp)         if (IFile->OpenOutFile(IFile, fileName, isTemp))                              \
+#define OPEN_FILE_OUT(fileName, isTemp)         if (IFile->OpenOutFile(IFile, fileName, isTemp))                \
                                                 {                                                               \
-                                                    return SZ_ERROR_FAIL;                                        \
+                                                    return SZ_ERROR_FAIL;                                       \
                                                 }        
 
-#define OPEN_FILE_IN(fileName, isTemp)          if (IFile->OpenInFile(IFile, fileName, isTemp))                          \
+#define OPEN_FILE_IN(fileName, isTemp)          if (IFile->OpenInFile(IFile, fileName, isTemp))                 \
                                                 {                                                               \
                                                     return SZ_ERROR_FAIL;                                       \
                                                 }
 
-#define F_WRITE(buf, size, isTemp)              {                                                       \
+#define F_WRITE(buf, size, isTemp)              {                                                               \
                                                     SizeT written = IFile->FileWrite(IFile, buf, size, isTemp); \
-                                                    if (written != size) {                              \
-                                                        return SZ_ERROR_WRITE;                                           \
-                                                    }                                                   \
-                                                    size = written;                                     \
+                                                    if (written != size) {                                      \
+                                                        return SZ_ERROR_WRITE;                                  \
+                                                    }                                                           \
+                                                    size = written;                                             \
                                                 }
 
-#define F_READ(buf, size, isTemp)               if (IFile->FileRead(IFile, buf, size, isTemp))                       \
-                                                {                                                       \
-                                                    res = SZ_ERROR_READ;                                \
+#define F_READ(buf, size, isTemp)               if (IFile->FileRead(IFile, buf, size, isTemp))                  \
+                                                {                                                               \
+                                                    return SZ_ERROR_READ;                                       \
                                                 }
 
 #define TEMP_FILE   1

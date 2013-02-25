@@ -67,6 +67,7 @@ typedef struct Bcj2_dec_state
 }   Bcj2_st, *pBcj2_st;
 
 #define Bcj2_dec_state_init(st)         {                           \
+                                            int i;                  \
                                             st.out_for_now = 0;           \
                                             st.prev_byte = 0;       \
                                             st.code = 0;            \

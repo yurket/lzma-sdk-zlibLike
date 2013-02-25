@@ -7,17 +7,20 @@ typedef struct write_state
     CSzFile out_file;
     Bool fileOpened;
     Bool FitsToOneFile;
-} wr_st_t, *pwr_st_t;
 
-#define write_state_init(st) {  st.outSize = 0;              \
-                                st.bytesWritten = 0;         \
-                                st.fileToWriteIndex = 0;     \
-                                st.FitsToOneFile = False;    \
-                                File_Construct(&st.out_file);\
-                                st.fileOpened = False;       \
-                             };                              \
+};
 
-typedef struct read_state
+static void write_state_init(struct write_state_t * s)
+{
+    s->outSize = 0;
+    s->bytesWritten = 0;
+    s->fileToWriteIndex = 0;
+    s->FitsToOneFile = False;
+    File_Construct(&(s->out_file));
+    s->fileOpened = False;
+}
+
+struct read_state_t
 {
     SizeT inSize;
     SizeT bytesRead;
@@ -25,16 +28,7 @@ typedef struct read_state
     CSzFile in_file;
     Bool fileOpened;
     Bool FitsToOneFile;
-} r_st_t, *pr_st_t;
-
-#define read_state_init(st) {  st.inSize = 0;               \
-                               st.bytesRead = 0;            \
-                               st.fileToReadIndex = 0;      \
-                               st.FitsToOneFile = False;    \
-                               File_Construct(&st.in_file); \
-                               st.fileOpened = False;       \
-                            };                              \
-
+};
 
 
 

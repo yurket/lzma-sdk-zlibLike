@@ -248,6 +248,7 @@ typedef struct IFileStream_t {
 } IFileStream;
 
 void IFileStream_CreateVTable(IFileStream *p, ISzAlloc *);
+
 #ifdef _WIN32
 
 #define CHAR_PATH_SEPARATOR '\\'
