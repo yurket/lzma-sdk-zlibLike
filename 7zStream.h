@@ -1,5 +1,11 @@
+#ifndef __7Z_STREAM_H
+#define __7Z_STREAM_H
 
-typedef struct write_state
+#include "7z.h"
+#include "7zFile.h"
+#include "Types.h"
+
+struct write_state_t
 {
     SizeT outSize;
     UInt64 bytesWritten;
@@ -30,8 +36,18 @@ struct read_state_t
     Bool FitsToOneFile;
 };
 
+static void read_state_init(struct read_state_t * s)
+{
+    s->inSize = 0;
+    s->bytesRead = 0;
+    s->fileToReadIndex = 0;
+    s->FitsToOneFile = False;
+    File_Construct(&(s->in_file));
+    s->fileOpened = False;
+}
 
+SRes WriteStream(IFileStream  *IFile, const UInt32 folderIndex, const CSzArEx *db, Byte *buf, SizeT size, struct write_state_t * st);
+SRes WriteTempStream(IFileStream  *IFile, Byte *buf, SizeT buf_size, Bool StopWriting, struct write_state_t * st);
+SRes ReadTempStream(IFileStream  *IFile, Byte *buf, SizeT *buf_size, struct read_state_t * st);
 
-SRes WriteStream(IFileStream  *IFile, const UInt32 folderIndex, const CSzArEx *db, Byte *buf, size_t size, pwr_st_t st);
-SRes WriteTempStream(IFileStream  *IFile, Byte *buf, size_t buf_size, Bool StopWriting, pwr_st_t st);
-SRes ReadTempStream(IFileStream  *IFile, Byte *buf, size_t *buf_size, pr_st_t st);
+#endif /* __7Z_STREAM_H */

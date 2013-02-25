@@ -214,25 +214,27 @@ static wchar_t * BaseName(wchar_t *path)
     return path;
 }
 
-SizeT CountBytesToWrite(const UInt32 folderIndex, const CSzArEx *db, SizeT buf_size, pwr_st_t st)
+SizeT CountBytesToWrite(const UInt32 folderIndex, const CSzArEx *db, SizeT buf_size, struct write_state_t *st)
 {
     const UInt64 startOffset = st->bytesWritten;
     UInt64 filesOffsetSums = 0;
     SizeT bytesToWriteInCurFile = 0;
-    for (UInt32 i = 0; i < db->db.NumFiles; i++)
+    UInt32 i;
+    for (i = 0; i < db->db.NumFiles; i++)
     {
+        CSzFileItem * curFile;
         if (db->FileIndexToFolderIndexMap[i] != folderIndex)        // skip files from other folders
             continue;
 
-        CSzFileItem &curFile = db->db.Files[i];
-        if (curFile.IsDir)
+        curFile = &(db->db.Files[i]);
+        if (curFile->IsDir)
             continue;
 
-        filesOffsetSums += curFile.Size;
+        filesOffsetSums += curFile->Size;
         if (startOffset < filesOffsetSums)        // need to flush data in file with index i
         {
-            st->fileToWriteIndex = i;
             Int64 remForCurFile = (Int64)filesOffsetSums - (startOffset + buf_size);    // must be signed
+            st->fileToWriteIndex = i;
             if ( remForCurFile > 0 )                                             // whole buf fits to current file
             {
                 st->FitsToOneFile = TRUE;
@@ -249,7 +251,7 @@ SizeT CountBytesToWrite(const UInt32 folderIndex, const CSzArEx *db, SizeT buf_s
     return 0;
 }
 
-SRes WriteStream(IFileStream  *IFile, const UInt32 folderIndex, const CSzArEx *db, Byte *buf, size_t buf_size, pwr_st_t st)
+SRes WriteStream(IFileStream  *IFile, const UInt32 folderIndex, const CSzArEx *db, Byte *buf, SizeT buf_size, struct write_state_t *st)
 {
     SRes res = SZ_OK;
     SizeT offset = 0;
@@ -261,11 +263,12 @@ SRes WriteStream(IFileStream  *IFile, const UInt32 folderIndex, const CSzArEx *d
     while (buf_size)
     {
         wchar_t *fileName = NULL;
+        UInt32 i;
         SizeT bytesToWrite = CountBytesToWrite(folderIndex, db, buf_size, st);
         if (bytesToWrite == 0)
             return 0;
 
-        for (UInt32 i = 0; i < db->db.NumFiles; i++)
+        for (i = 0; i < db->db.NumFiles; i++)
             if (i == st->fileToWriteIndex)
             {
                 fileName = (wchar_t *)db->FileNames.data + db->FileNameOffsets[i];
@@ -299,7 +302,7 @@ SRes WriteStream(IFileStream  *IFile, const UInt32 folderIndex, const CSzArEx *d
 }
 
 
-SRes WriteTempStream(IFileStream  *IFile, Byte *buf, size_t buf_size, Bool StopWriting, pwr_st_t st)
+SRes WriteTempStream(IFileStream  *IFile, Byte *buf, SizeT buf_size, Bool StopWriting, struct write_state_t * st)
 {
     SRes res = SZ_OK;
     if (buf == NULL)
@@ -327,9 +330,11 @@ SRes WriteTempStream(IFileStream  *IFile, Byte *buf, size_t buf_size, Bool StopW
 
     return res;
 }
-SRes ReadTempStream(IFileStream  *IFile, Byte *buf, size_t *buf_size, pr_st_t st)
+SRes ReadTempStream(IFileStream  *IFile, Byte *buf, SizeT *buf_size, struct read_state_t * st)
 {
     SRes res = SZ_OK;
+    SizeT bytes_to_read;
+
     if (buf == NULL)
         return SZ_ERROR_DATA;
     if (*buf_size == 0)
@@ -340,7 +345,7 @@ SRes ReadTempStream(IFileStream  *IFile, Byte *buf, size_t *buf_size, pr_st_t st
         st->fileOpened = TRUE;
     }
 
-    SizeT bytes_to_read = *buf_size;
+    bytes_to_read = *buf_size;
     F_READ(buf, &bytes_to_read, TEMP_FILE);
 
     if (bytes_to_read < *buf_size || res )

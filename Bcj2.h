@@ -76,7 +76,7 @@ typedef struct Bcj2_dec_state
                                             st.prob = NULL;         \
                                             st.bound = 0;           \
                                             st.ttt = 0;             \
-                                            for (int i = 0; i < sizeof(st.p) / sizeof(st.p[0]); i++){     \
+                                            for (i = 0; i < sizeof(st.p) / sizeof(st.p[0]); i++){     \
                                                 st.p[i] = kBitModelTotal >> 1;                              \
                                             }                                                               \
                                         };                          \
