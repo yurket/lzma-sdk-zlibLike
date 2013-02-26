@@ -478,10 +478,10 @@ SRes SzFolder_Decode(const CSzFolder *folder, const UInt64 *packSizes,
 #define DECODING        0
 #define ENCODING        1
 
-#define ALLOCATE_BUF(buf, size)                         \
-do {                                                    \
-    buf = (Byte *)IAlloc_Alloc(allocMain, size);        \
-    if (buf == NULL)  return SZ_ERROR_MEM;              \
+#define ALLOCATE_BUF(buf, size)                           \
+do {                                                      \
+    buf = (Byte *)IAlloc_Alloc(allocMain, size);          \
+    if (buf == NULL)  return SZ_ERROR_MEM;                \
 } while (0)
 
 #define ALLOCATE_BUFS(in_buf, in_size, out_buf, out_size) \
@@ -503,12 +503,12 @@ do {                                                      \
 } while (0)
 
 // ===================================================================================================
-#define RETAIN_BUF_SIZE            4     //  4 is LookAhead in x86_Convert()
+#define RETAIN_BUF_MAX_SIZE            4     //  4 is LookAhead in x86_Convert()
 
 #define BCJ_state_init(state)          do {                                             \
     state.ip = 0;                                                                       \
     state.x86_state = 0;                                                                \
-    state.retain_buf = (Byte *)IAlloc_Alloc(allocMain, RETAIN_BUF_SIZE);            \
+    state.retain_buf = (Byte *)IAlloc_Alloc(allocMain, RETAIN_BUF_MAX_SIZE);            \
     state.retain_buf_size = 0;                                                          \
     state.FirstBuffer = True;                                                           \
 } while (0)
@@ -540,11 +540,11 @@ static SizeT DecodeBCJ(Byte *data, SizeT *size, struct BCJ_state *st, Bool last_
     if (st->retain_buf_size)
         memcpy(data, st->retain_buf, st->retain_buf_size);        // copy 4 bytes in the beginning of buffer. (4 bytes remained from prev. call)
     *size += st->retain_buf_size;
-    offset = (st->FirstBuffer) ? RETAIN_BUF_SIZE : 0;
+    offset = (st->FirstBuffer) ? RETAIN_BUF_MAX_SIZE : 0;
     processed = x86_Convert(data + offset, *size, st->ip, &st->x86_state, DECODING);
     st->ip += processed;
     retain_bytes = *size - processed;                           // retain_bytes usually 4 bytes, because x86_Convert() don't even look on
-    if (retain_bytes > RETAIN_BUF_SIZE)                         //    last 4 bytes ('jmp addr' in asm code is 5 bytes long)
+    if (retain_bytes > RETAIN_BUF_MAX_SIZE)                         //    last 4 bytes ('jmp addr' in asm code is 5 bytes long)
     {
         return SZ_ERROR_MEM;
     }
@@ -771,7 +771,7 @@ static Bool IsFilterPresent(const CSzFolder *folder)
 static SRes ApplyBCJ(IFileStream  *IFile, SizeT total_unpack_size, const UInt32 folderIndex, const CSzArEx *db, ISzAlloc *allocMain)
 {
     Byte *decodeBuf = NULL;
-    SizeT myOutBufSize = OUT_BUF_SIZE + RETAIN_BUF_SIZE;
+    SizeT myOutBufSize = OUT_BUF_SIZE + RETAIN_BUF_MAX_SIZE;
     struct write_state_t wr_st;
     struct read_state_t r_st;
     struct BCJ_state bcj1_st;
@@ -787,17 +787,17 @@ static SRes ApplyBCJ(IFileStream  *IFile, SizeT total_unpack_size, const UInt32 
         SizeT processed = 0, bytes_read = OUT_BUF_SIZE;
         SizeT retain_offset = 0;
         Bool LastBuf = False;
-        RINOK(ReadTempStream(IFile, decodeBuf + RETAIN_BUF_SIZE, &bytes_read, &r_st));
+        RINOK(ReadTempStream(IFile, decodeBuf + RETAIN_BUF_MAX_SIZE, &bytes_read, &r_st));
 
         LastBuf = (total_unpack_size - (bytes_read + RETAIN_BUF_SIZE)) == 0 ? True : False;
 
         processed = DecodeBCJ(decodeBuf, &bytes_read, &bcj1_st, LastBuf);
-
         if (processed == 0)
             break;
+
         if (bcj1_st.FirstBuffer)               // first out buffer should start from offset RETAIN_BUF_SIZE
         {
-            retain_offset = RETAIN_BUF_SIZE;
+            retain_offset = RETAIN_BUF_MAX_SIZE;
             bcj1_st.FirstBuffer = False;
         }
         RINOK(WriteStream(IFile, folderIndex, db, decodeBuf + retain_offset, processed, &wr_st));
