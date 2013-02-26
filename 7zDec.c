@@ -539,19 +539,23 @@ static SizeT DecodeBCJ(Byte *data, SizeT *size, struct BCJ_state *st, Bool last_
 {
     SizeT offset;
     SizeT processed = 0, retain_bytes;
+    Byte *data_start;
+
+    offset = (st->FirstBuffer) ? RETAIN_BUF_MAX_SIZE : RETAIN_BUF_MAX_SIZE - st->retain_buf_size;
+    data_start = data + offset;
+
     if (st->retain_buf_size)
         memcpy(data_start, st->retain_buf, st->retain_buf_size);        // copy 4(or less) bytes in the beginning of buffer. (4 bytes remained from prev. call)
 
     *size += st->retain_buf_size;
-    offset = (st->FirstBuffer) ? RETAIN_BUF_MAX_SIZE : 0;
-    processed = x86_Convert(data + offset, *size, st->ip, &st->x86_state, DECODING);
+    processed = x86_Convert(data_start, *size, st->ip, &st->x86_state, DECODING);
     st->ip += processed;
     retain_bytes = *size - processed;                   // retain_bytes is 4 or less, because x86_Convert() looks for 'jmp' instructions in code
     if (retain_bytes > RETAIN_BUF_MAX_SIZE)
     {
         return SZ_ERROR_MEM;
     }
-    memcpy(st->retain_buf, (data + offset) + processed, retain_bytes);
+    memcpy(st->retain_buf, data_start + processed, retain_bytes);
     st->retain_buf_size = retain_bytes;
 
     if (last_time)
@@ -792,17 +796,20 @@ static SRes ApplyBCJ(IFileStream  *IFile, SizeT total_unpack_size, const UInt32 
         Bool LastBuf = False;
         RINOK(ReadTempStream(IFile, decodeBuf + RETAIN_BUF_MAX_SIZE, &bytes_read, &r_st));
 
-        LastBuf = (total_unpack_size - (bytes_read + RETAIN_BUF_SIZE)) == 0 ? True : False;
+        if (bcj1_st.FirstBuffer)               // first out buffer should start from offset RETAIN_BUF_MAX_SIZE
+        {
+            retain_offset = RETAIN_BUF_MAX_SIZE;
+            bcj1_st.FirstBuffer = False;
+        }
+        else
+        {
+           retain_offset = RETAIN_BUF_MAX_SIZE - bcj1_st.retain_buf_size;
+        }
 
         processed = DecodeBCJ(decodeBuf, &bytes_read, &bcj1_st, LastBuf);
         if (processed == 0)
             break;
 
-        if (bcj1_st.FirstBuffer)               // first out buffer should start from offset RETAIN_BUF_SIZE
-        {
-            retain_offset = RETAIN_BUF_MAX_SIZE;
-            bcj1_st.FirstBuffer = False;
-        }
         RINOK(WriteStream(IFile, folderIndex, db, decodeBuf + retain_offset, processed, &wr_st));
         total_unpack_size -= processed;
 
