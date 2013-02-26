@@ -795,6 +795,8 @@ static SRes ApplyBCJ(IFileStream  *IFile, SizeT total_unpack_size, const UInt32 
         SizeT retain_offset = 0;
         Bool LastBuf = False;
         RINOK(ReadTempStream(IFile, decodeBuf + RETAIN_BUF_MAX_SIZE, &bytes_read, &r_st));
+        if (bytes_read < OUT_BUF_SIZE)                  // если размер файла кратен OUT_BUF_SIZE => ?
+            LastBuf = True;
 
         if (bcj1_st.FirstBuffer)               // first out buffer should start from offset RETAIN_BUF_MAX_SIZE
         {
