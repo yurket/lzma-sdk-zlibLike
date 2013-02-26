@@ -526,25 +526,28 @@ struct BCJ_state
     Bool FirstBuffer;
 };
 
-// DecodeBCJ() - apply BCJ filter on single buffer
-// (..)
+// DecodeBCJ() - apply BCJ filter on single buffer. Because of splitting decoding process on sequential calls, buffer
+//               consists of 3 parts: 1) heading 4 (or less) bytes which are in particular the tail of buffer from previous call,
+//               2) the main part; 3) tail 4 (or less) bytes which always are not being processed and which we will append to the head
+//               next buffer.
+// data - input buffer, that starts with 4 "spare" bytes. Problem is that depending on the last function call
+//        we need to copy UP TO 4 bytes from the end of "data" buffer from the previous call into the first "spare" bytes of current buffer.
+//        All this is done to avoid memcpy() on whole buffer.
 // st - info about filter applying process,
 // last_time - tells if it is last buffer to apply filter on.
-
-//
-//
 static SizeT DecodeBCJ(Byte *data, SizeT *size, struct BCJ_state *st, Bool last_time)
 {
     SizeT offset;
     SizeT processed = 0, retain_bytes;
     if (st->retain_buf_size)
-        memcpy(data, st->retain_buf, st->retain_buf_size);        // copy 4 bytes in the beginning of buffer. (4 bytes remained from prev. call)
+        memcpy(data_start, st->retain_buf, st->retain_buf_size);        // copy 4(or less) bytes in the beginning of buffer. (4 bytes remained from prev. call)
+
     *size += st->retain_buf_size;
     offset = (st->FirstBuffer) ? RETAIN_BUF_MAX_SIZE : 0;
     processed = x86_Convert(data + offset, *size, st->ip, &st->x86_state, DECODING);
     st->ip += processed;
-    retain_bytes = *size - processed;                           // retain_bytes usually 4 bytes, because x86_Convert() don't even look on
-    if (retain_bytes > RETAIN_BUF_MAX_SIZE)                         //    last 4 bytes ('jmp addr' in asm code is 5 bytes long)
+    retain_bytes = *size - processed;                   // retain_bytes is 4 or less, because x86_Convert() looks for 'jmp' instructions in code
+    if (retain_bytes > RETAIN_BUF_MAX_SIZE)
     {
         return SZ_ERROR_MEM;
     }
@@ -552,7 +555,7 @@ static SizeT DecodeBCJ(Byte *data, SizeT *size, struct BCJ_state *st, Bool last_
     st->retain_buf_size = retain_bytes;
 
     if (last_time)
-        processed += retain_bytes;      // don't forget to add that 4 bytes.
+        processed += retain_bytes;
     *size = processed;
     return processed;
 }
