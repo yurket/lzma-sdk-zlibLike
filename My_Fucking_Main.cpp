@@ -26,7 +26,7 @@ static char *LetsFind7z(char *fileName)
     FILE *fout = fopen("7zpart.7z", "wb");
     Byte buf[k7zSignatureSize];
     Byte *write_buf = (Byte *) new Byte[BUF_SIZE];
-    if (!fin && !fout)
+    if (!fin || !fout)
     {
         printf("Can't open file %s\n", (!fin) ? fileName: "7zpart.7z");
         return NULL;
@@ -131,7 +131,20 @@ int main(int argc, char *argv[])
     printf("====================================================\n");
 
     res = ExtractAllFiles(&db, &lookStream.s, &IFile, &allocImp);
+    switch (res)
+    {
+    case SZ_ERROR_UNSUPPORTED:
+        wprintf(L"[-] Error unsupported!\n");
+        break;
+    case SZ_OK:
+        wprintf(L"[+] Ok! No errors detected \n");
+        break;
+    default:
+        wprintf(L"[-] Some error occured!\n");
+        break;
+    }
     File_Close(&archiveStream.file);
+    SzArEx_Free(&db, &allocImp);
     Cleanup(&IFile);
     system("pause");
     return 0;

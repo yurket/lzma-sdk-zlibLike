@@ -337,7 +337,7 @@ static void IFileStream_CloseFile(IFileStream *pFileStream, int isTemp)
     else
         p = (CSzFile *)pFileStream->realFile;
     File_Close(p);
-    IAlloc_Free(pFileStream->mem_alctr, p);
+    IAlloc_Free(pFileStream->mem_alctr, p);                 //  зачем здесь освобождать память из структуры????????? 
     p = NULL;
 }
 
