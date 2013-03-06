@@ -262,7 +262,7 @@ SRes WriteStream(IFileStream  *IFile, const UInt32 folderIndex, const CSzArEx *d
 
     while (buf_size)
     {
-        wchar_t *fileName = NULL;
+        void *fileName = NULL;
         UInt32 i;
         SizeT bytesToWrite = CountBytesToWrite(folderIndex, db, buf_size, st);
         if (bytesToWrite == 0)
@@ -271,8 +271,7 @@ SRes WriteStream(IFileStream  *IFile, const UInt32 folderIndex, const CSzArEx *d
         for (i = 0; i < db->db.NumFiles; i++)
             if (i == st->fileToWriteIndex)
             {
-                fileName = (wchar_t *)db->FileNames.data + db->FileNameOffsets[i];
-                //fileName = BaseName(fileName);
+                fileName = (void *)(db->FileNames.data + db->FileNameOffsets[i] * 2);
                 break;
             }
 

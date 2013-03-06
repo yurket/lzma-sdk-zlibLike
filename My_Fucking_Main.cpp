@@ -101,6 +101,9 @@ int main(int argc, char *argv[])
         return 1;
     }
     char *SzFileName = LetsFind7z(FileName);
+    if (SzFileName == NULL)
+        return -1;
+
     if (InFile_Open(&archiveStream.file, SzFileName))
     {
         printf("can not open input file %s\n", SzFileName);
