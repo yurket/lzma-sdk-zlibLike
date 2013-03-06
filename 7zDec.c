@@ -729,11 +729,12 @@ static SRes SzDecodeLzma2ToFileWithBuf(const UInt32 folderIndex, CSzCoderInfo *c
 }
 
 static SRes SzDecodeCopyToFileWithBuf(const UInt32 folderIndex, const CSzArEx *db, ILookInStream *inStream, 
-                                      IFileStream  *IFile, SizeT outSize, ISzAlloc *allocMain)
+                                      IFileStream  *IFile, SizeT outSize, ISzAlloc *allocMain, Bool filterPresent)
 {
     Byte *buf;
     SizeT out_size = 0, bytes_read = 0;
     struct write_state_t st;
+    Bool StopDecoding = False;
 
     if (outSize <= 0 || !inStream )
         return SZ_ERROR_FAIL;
@@ -746,8 +747,18 @@ static SRes SzDecodeCopyToFileWithBuf(const UInt32 folderIndex, const CSzArEx *d
         SizeT rem = outSize - out_size;
         bytes_read = (rem < COPY_BUF_SIZE) ? rem : COPY_BUF_SIZE;
         RINOK(inStream->Read(inStream, buf, &bytes_read));
-        RINOK(WriteStream(IFile, folderIndex, db, buf, bytes_read, &st));
+
         out_size += bytes_read;
+
+        StopDecoding = (out_size >= outSize)? True : False;
+        if (filterPresent)
+        {
+            RINOK(WriteTempStream(IFile, buf, bytes_read, StopDecoding, &st));
+        }
+        else
+        {
+            RINOK(WriteStream(IFile, folderIndex, db, buf, bytes_read, &st));
+        }
     }
 
     FREE_BUF(buf);
@@ -933,7 +944,7 @@ static SRes SzFolder_Decode2ToFile(const CSzFolder *folder, const UInt32 folderI
                 }
                 else
                 {
-                    RINOK(SzDecodeCopyToFileWithBuf(folderIndex, db, inStream, IFile, outSizeCur, allocMain));
+                    RINOK(SzDecodeCopyToFileWithBuf(folderIndex, db, inStream, IFile, outSizeCur, allocMain, FilterPresent));
                 }
             }
             else if (coder->MethodID == k_LZMA)
