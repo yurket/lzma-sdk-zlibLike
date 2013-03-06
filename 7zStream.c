@@ -86,22 +86,22 @@ static SRes LookToRead_Look_Lookahead(void *pp, const void **buf, size_t *size)
   return res;
 }
 
-static SRes LookToRead_Look_Exact(void *stream, const void **buf, size_t *size)
+static SRes LookToRead_Look_Exact(void *pp, const void **buf, size_t *size)
 {
   SRes res = SZ_OK;
-  CLookToRead *pStream = (CLookToRead *)stream;
-  size_t size2 = pStream->size - pStream->pos;
+  CLookToRead *p = (CLookToRead *)pp;
+  size_t size2 = p->size - p->pos;
   if (size2 == 0 && *size > 0)
   {
-    pStream->pos = 0;
+    p->pos = 0;
     if (*size > LookToRead_BUF_SIZE)
       *size = LookToRead_BUF_SIZE;
-    res = pStream->realStream->Read(pStream->realStream, pStream->buf, size);
-    size2 = pStream->size = *size;
+    res = p->realStream->Read(p->realStream, p->buf, size);
+    size2 = p->size = *size;
   }
   if (size2 < *size)
     *size = size2;
-  *buf = pStream->buf + pStream->pos;
+  *buf = p->buf + p->pos;
   return res;
 }
 
