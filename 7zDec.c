@@ -596,7 +596,7 @@ static SRes SzDecodeLzmaToFileWithBuf(const UInt32 folderIndex, CSzCoderInfo *co
 
         if (to_read)                            // if more than 1 folder in db, a part of the next folder stream can be read ->
         {                                       // it's not a problem, because before unpacking new db folder it first seeks to right position
-            bytes_read = IN_BUF_SIZE;   
+            bytes_read = IN_BUF_SIZE;
             RINOK(inStream->Read(inStream, myInBufBitch, &bytes_read));
             in_buf_size = bytes_left = bytes_read;
         }
@@ -638,7 +638,7 @@ static SRes SzDecodeLzmaToFileWithBuf(const UInt32 folderIndex, CSzCoderInfo *co
             out_buf_size = OUT_BUF_SIZE;
             if (StopDecoding)
                 break;
-        }   
+        }
 
     }
 
@@ -777,6 +777,7 @@ static Bool IsFilterPresent(const CSzFolder *folder)
 // Размер входных данных = размеру выходных, так что размер буфера можно брать любой.
 static SRes ApplyBCJ(IFileStream  *IFile, SizeT total_unpack_size, const UInt32 folderIndex, const CSzArEx *db, ISzAlloc *allocMain)
 {
+    SRes res = SZ_OK;
     Byte *decodeBuf = NULL;
     SizeT myOutBufSize = OUT_BUF_SIZE + RETAIN_BUF_MAX_SIZE;
     struct write_state_t wr_st;
@@ -821,13 +822,14 @@ static SRes ApplyBCJ(IFileStream  *IFile, SizeT total_unpack_size, const UInt32 
 
     FREE_BUF(decodeBuf);
     BCJ_state_free(bcj1_st);
-    return SZ_OK;
+    return res;
 }
 
 
 static SRes ApplyBCJ2(IFileStream  *IFile, SizeT total_out_size, const UInt32 folderIndex, 
                       const CSzArEx *db, ISzAlloc *allocMain, Byte *tempBuf[], SizeT tempSizes[])
 {
+    SRes res = SZ_OK;
     Byte *myInBufBitch = NULL, *myOutBufBitch = NULL;
     struct write_state_t wr_st;
     struct read_state_t r_st;
@@ -862,7 +864,7 @@ static SRes ApplyBCJ2(IFileStream  *IFile, SizeT total_out_size, const UInt32 fo
     }
 
     FREE_BUFS(myInBufBitch, myOutBufBitch);
-    return SZ_OK;
+    return res;
 }
 static SRes SzFolder_Decode2ToFile(const CSzFolder *folder, const UInt32 folderIndex, const UInt64 *packSizes,
                              ILookInStream *inStream, IFileStream  *IFile, const CSzArEx *db, UInt64 startPos,

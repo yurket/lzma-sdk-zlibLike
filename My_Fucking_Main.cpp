@@ -125,7 +125,7 @@ int main(int argc, char *argv[])
     for (i = 0, pOffsets = db.FileNameOffsets; i < db.db.NumFiles; i++)
     {
         CSzFileItem *file = db.db.Files + i;
-        wprintf(L"%-2d: %-37s - %s, unpacked: %ld\n", 
+        wprintf(L"%-2d: %-37s - %s, unpacked: %ld\n",
             i, db.FileNames.data + (*pOffsets++)*sizeof(wchar_t) ,file->IsDir?L"dir":L"file", file->Size);
     }
     printf("====================================================\n");

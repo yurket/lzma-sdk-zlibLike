@@ -237,7 +237,7 @@ SizeT CountBytesToWrite(const UInt32 folderIndex, const CSzArEx *db, SizeT buf_s
             st->fileToWriteIndex = i;
             if ( remForCurFile > 0 )                                             // whole buf fits to current file
             {
-                st->FitsToOneFile = TRUE;
+                st->FitsToOneFile = True;
                 return buf_size;
             }
             else                                                                // need to split writing into several files
@@ -279,7 +279,7 @@ SRes WriteStream(IFileStream  *IFile, const UInt32 folderIndex, const CSzArEx *d
         if (!st->fileOpened)
         {
             OPEN_FILE_OUT(fileName, NOT_TEMP);
-            st->fileOpened = TRUE;
+            st->fileOpened = True;
         }
 
         while(bytesToWrite)
@@ -312,7 +312,7 @@ SRes WriteTempStream(IFileStream  *IFile, Byte *buf, SizeT buf_size, Bool StopWr
     if (!st->fileOpened)
     {
         OPEN_FILE_OUT(NULL, TEMP_FILE);
-        st->fileOpened = TRUE;
+        st->fileOpened = True;
     }
 
     while (buf_size)
@@ -342,7 +342,7 @@ SRes ReadTempStream(IFileStream  *IFile, Byte *buf, SizeT *buf_size, struct read
     if (!st->fileOpened)
     {
         OPEN_FILE_IN(NULL, TEMP_FILE);
-        st->fileOpened = TRUE;
+        st->fileOpened = True;
     }
 
     bytes_to_read = *buf_size;
