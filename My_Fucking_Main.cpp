@@ -120,8 +120,26 @@ int main(int argc, char *argv[])
 
     SzArEx_Init(&db);
     res = SzArEx_Open(&db, &lookStream.s, &allocImp, &allocTempImp);
+    switch (res)
+    {
+    case SZ_OK:
+        wprintf(L"[+] SzArEx_Open: Ok!\n");
+        break;
+    case SZ_ERROR_UNSUPPORTED:
+        wprintf(L"[-] SzArEx_Open: Error unsupported!\n");
+        break;
+    case SZ_ERROR_FAIL:
+        wprintf(L"[-] SzArEx_Open: Some error occured! (Fail)\n");
+        break;
+    case SZ_ERROR_CRC:
+        wprintf(L"[-] SzArEx_Open: CRC error! (Fail)\n");
+        break;
+    default:
+        wprintf(L"[-] SzArEx_Open: Unknown error!\n");
+        break;
+    }
+    RINOK(res);
 
-    res == SZ_OK ? printf("open archive ok\n") : printf("not ok\n");
     printf("file count: %d, NumPackSterams: %d, \n", db.db.NumFiles, db.db.NumPackStreams);
     printf("====================================================\n");
 
@@ -136,16 +154,17 @@ int main(int argc, char *argv[])
     res = ExtractAllFiles(&db, &lookStream.s, &IFile, &allocImp);
     switch (res)
     {
-    case SZ_ERROR_UNSUPPORTED:
-        wprintf(L"[-] Error unsupported!\n");
-        break;
     case SZ_OK:
-        wprintf(L"[+] Ok! No errors detected \n");
+        wprintf(L"[+] ExtractAllFiles: Ok! No errors detected \n");
+        break;
+    case SZ_ERROR_UNSUPPORTED:
+        wprintf(L"[-] ExtractAllFiles: Error unsupported!\n");
         break;
     default:
-        wprintf(L"[-] Some error occured!\n");
+        wprintf(L"[-] ExtractAllFiles: Some error occured!\n");
         break;
     }
+    RINOK(res);
     File_Close(&archiveStream.file);
     SzArEx_Free(&db, &allocImp);
     Cleanup(&IFile);
