@@ -188,6 +188,7 @@ SRes SzArEx_Extract(
 
 
 SRes ExtractAllFiles(const CSzArEx *p, ILookInStream *inStream, IFileStream  *IFile, ISzAlloc *allocMain);
+SRes ExtractZeroSizeFiles(const CSzArEx *p, const IFileStream  *IFile);
 
 SRes SzFolder_DecodeToFile(const CSzFolder *folder, const UInt32 folderIndex, const UInt64 *packSizes,
                            ILookInStream *stream, IFileStream  *IFile, const CSzArEx *db, UInt64 startPos,

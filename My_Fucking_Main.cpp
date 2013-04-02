@@ -164,10 +164,15 @@ int main(int argc, char *argv[])
         wprintf(L"[-] ExtractAllFiles: Some error occured!\n");
         break;
     }
+
     RINOK(res);
+
+    ExtractZeroSizeFiles(&db, &IFile);
+
     File_Close(&archiveStream.file);
     SzArEx_Free(&db, &allocImp);
     Cleanup(&IFile);
+
     system("pause");
     return 0;
 }

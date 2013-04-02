@@ -1424,3 +1424,23 @@ SRes ExtractAllFiles( const CSzArEx *p, ILookInStream *inStream, IFileStream  *I
     }
     return res;
 }
+
+SRes ExtractZeroSizeFiles(const CSzArEx *p, const IFileStream  *IFile)
+{
+    int i = 0;
+    for (i = 0; i < p->db.NumFiles; i++)
+    {
+        const CSzFileItem *file = &p->db.Files[i];
+        if (file->Size == 0 && !file->IsDir)
+        {
+            const void *name = NULL;
+
+            if (p->FileNames.data != NULL || p->FileNameOffsets != NULL)
+                name = (const void *)(p->FileNames.data + p->FileNameOffsets[i] * 2);
+
+            IFile->OpenOutFile(IFile, name, 0/* NOT_TEMP */);
+            IFile->FileClose(IFile, 0/* NOT_TEMP */);
+        }
+    }
+    return SZ_OK;
+}
