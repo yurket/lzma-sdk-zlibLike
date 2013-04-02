@@ -118,6 +118,7 @@ int main(int argc, char *argv[])
     IFileStream_CreateVTable(&IFile, &allocImp);
     CrcGenerateTable();
 
+    printf("Unpacking...\n");
     SzArEx_Init(&db);
     res = SzArEx_Open(&db, &lookStream.s, &allocImp, &allocTempImp);
     switch (res)
@@ -147,10 +148,23 @@ int main(int argc, char *argv[])
     {
         CSzFileItem *file = db.db.Files + i;
         wprintf(L"%-2d: %-37s - %s, unpacked: %ld\n",
-            i, db.FileNames.data + (*pOffsets++)*sizeof(wchar_t) ,file->IsDir?L"dir":L"file", file->Size);
+            i,
+            (db.FileNames.data != NULL) ? db.FileNames.data + (*pOffsets++)*sizeof(wchar_t) : (Byte *)L"[stream]",
+            file->IsDir ? L"dir" : L"file",
+            file->Size);
     }
     printf("====================================================\n");
 
+    long packed = 0, unpacked = 0;
+    for (int folderIndex = 0; folderIndex < db.db.NumFolders; folderIndex++)
+    {
+        CSzFolder *folder = db.db.Folders + folderIndex;
+        unpacked += SzFolder_GetUnpackSize(folder);
+        UInt64 foler_packed = 0;
+        SzArEx_GetFolderFullPackSize(&db, folderIndex, &foler_packed);
+        packed += foler_packed;
+    }
+    printf("unpacked: %ld, packed: %ld\n", unpacked, packed);
     res = ExtractAllFiles(&db, &lookStream.s, &IFile, &allocImp);
     switch (res)
     {
